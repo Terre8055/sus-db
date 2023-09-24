@@ -1,4 +1,15 @@
-# Data Persistency Design and Architecture
+# sus-db: Secure User String Database
+
+SUS-DB is a microservice dedicated to managing Secure User Strings (SUS) within our social app infrastructure. The service utilizes native Python dbm storage to securely store and handle user-specific data, focusing on privacy and efficient data access. SUS-DB interfaces with our central Redis station for synchronized updates and enables a seamless and secure experience for our users.
+
+**Key Features**:
+
+- Efficient and secure storage of Secure User Strings (SUS) for user identification.
+- Integration with central Redis station for synchronization and real-time updates.
+- Native Python dbm storage for optimized data management.
+- Privacy-centric design, ensuring minimal sensitive data persistence.
+
+## Data Persistency Design and Architecture
 
 Data architecture where we have a single store or repository, that we call a central station using redis which synchronises with individual stores, which we call IRs. Now every client or user when signs up is allocated a store or repo which uses the native python dbm. And when the individual dbm by python is updated, it puts a snapshot to the central store, which in turns syncs and updates the remaining IRs.
 
