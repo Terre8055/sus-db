@@ -15,4 +15,4 @@ Since we hate an SPOF, we also have CS slaves which also go in sync with the CS.
 3. The user_name ("user123") is associated with the user's account, providing a username for the user.
 4. The original Secure User String is securely hashed and stored in the user's data store for authentication and identification purposes.
 
-![sus_db_design](/home/mike/Downloads/diagram_sus.png)
+![sus_db_design](images/diagram_sus.png)
