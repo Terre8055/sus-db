@@ -16,7 +16,9 @@ class UserDBManager:
         self.secret_key = os.getenv("HMAC_SECRET_KEY").encode('utf-8')
         self.file_name = os.getenv("FILE_NAME")
         self.get_path = os.getenv("GET_PATH")
-        self.file_path = os.path.expanduser(f'~/{self.get_path}/{self.file_name}')
+        self.file_path = os.path.expanduser(
+            f'~/{self.get_path}/{self.file_name}'
+            )
         self.initialize_db()
 
     def initialize_db(self):
@@ -45,7 +47,11 @@ class UserDBManager:
         with dbm.open(self.file_path, 'w') as db:
             db['hash_sus'] = test_hash
 
-            computed_hmac = hmac.new(self.secret_key, test_hash.encode('utf-8'), hashlib.sha256).digest()
+            computed_hmac = hmac.new(
+                self.secret_key,
+                test_hash.encode('utf-8'), 
+                hashlib.sha256).digest()
+
             db['stored_hmac'] = computed_hmac
 
             stored_hmac = db.get('stored_hmac', None)
