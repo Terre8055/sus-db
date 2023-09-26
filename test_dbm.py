@@ -6,6 +6,8 @@ import hashlib
 from dotenv import load_dotenv
 import hmac
 from hmac import compare_digest as cdg
+import bcrypt
+import base64
 
 load_dotenv()
 
@@ -18,8 +20,8 @@ def HashString(user_str=None):
     return hashlib.sha256(user_str_bytes).hexdigest()
 
 
-
-request_str = 'bxgtef784po0'
+# test string
+request_str = 'bxgtef784po0' 
 
 # Hash the user string
 test_hash = HashString(request_str)
@@ -30,8 +32,10 @@ file_path = os.path.expanduser(f'~/{GET_PATH}/{FILE_NAME}')
 
 if os.path.exists(file_path):
     with dbm.open(file_path, 'ns') as db:
-        db['secured_user_string'] = request_str
         db['hash_sus'] = test_hash
+        print('hashlib: ->', db.get('hash_sus'))
+
+        get_hs = db.get('hash_sus')
 
         # Compute the HMAC of the stored hash 
         # computed_hmac is a crypto rep of the hash
@@ -42,4 +46,40 @@ if os.path.exists(file_path):
 
         # Verify the HMAC to ensure integrity and authenticity
         get_integrity =  stored_hmac and cdg(stored_hmac, computed_hmac)
+
+        if get_integrity:
+            # if integrity of crypt rep is achieved, add second hash layer
+            # and extract secured string with b64
+            b_hash = bcrypt.hashpw(get_hs, bcrypt.gensalt())
+            print('bcrypt: ->',  b_hash)
+            if bcrypt.checkpw(get_hs, b_hash):
+                print("Worked")
+                db['bhash'] = b_hash
+
+            secure_username = base64.urlsafe_b64encode(b_hash).decode('utf-8')[:12]
+            db['secured_user_string'] = secure_username
+
+print('<---------------------------------------------------------------------------->')
+print('<---------------------------------------------------------------------------->')
+print('<---------------------------------------------------------------------------->')
+print('<---------------------------------------------------------------------------->')
+print('<---------------------------------------------------------------------------->')
+
+
+with dbm.open(file_path, 'r') as db:
+    # Iterate through all the keys and values
+    for key in db.keys():
+        try:
+            key_str = key.decode('utf-8')
+        except UnicodeDecodeError:
+            key_str = key.hex()  # Display non-decodable bytes as hex
+
+        try:
+            value_str = db[key].decode('utf-8')
+        except UnicodeDecodeError:
+            value_str = db[key].hex()  # Display non-decodable bytes as hex
+
+        print(f"Key: {key_str}, Value: {value_str}")
+
+
 
