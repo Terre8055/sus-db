@@ -67,19 +67,7 @@ print('<------------------------------------------------------------------------
 
 
 with dbm.open(file_path, 'r') as db:
-    # Iterate through all the keys and values
+    # Iterate through all the keys
     for key in db.keys():
-        try:
-            key_str = key.decode('utf-8')
-        except UnicodeDecodeError:
-            key_str = key.hex()  # Display non-decodable bytes as hex
-
-        try:
-            value_str = db[key].decode('utf-8')
-        except UnicodeDecodeError:
-            value_str = db[key].hex()  # Display non-decodable bytes as hex
-
-        print(f"Key: {key_str}, Value: {value_str}")
-
-
-
+        value = db[key]  # Retrieve the value for each key
+        print(f"Key: {key.decode()}, Value: {value.decode()}")  # Decode bytes to string for display
