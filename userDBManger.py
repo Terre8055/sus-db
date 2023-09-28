@@ -67,15 +67,11 @@ class UserDBManager:
         # Serialize request data to JSON
         request_json = self.serialize_data(request_data)
 
-
-
         # Hash the serialized user string
         test_hash = self.hash_user_string(request_json)
 
-
-
         with dbm.open(self.file_path, 'w') as db:
-            db['hash_sus'] = test_hash.encode('utf-8)')
+            db['hash_sus'] = test_hash.encode('utf-8)') #to be used to generate lost user_string
 
             computed_hmac = hmac.new(
                 self.secret_key,
@@ -99,8 +95,8 @@ class UserDBManager:
                     print("Worked")
                     db['bhash'] = b_hash
 
-                secure_username = base64.urlsafe_b64encode(b_hash).decode('utf-8')[12:24]
-                db['secured_user_string'] = secure_username
+                secure_user_string = base64.urlsafe_b64encode(b_hash).decode('utf-8')[12:24]
+                db['secured_user_string'] = secure_user_string #to be sent as email on authentication
                 db['_id'] = self.unique_identifier.encode('utf-8')
 
     def display_user_db(self):
