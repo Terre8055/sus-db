@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Module to store hashed user strings in dbm and retrive secure user strings"""
 
 import os
