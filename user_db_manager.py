@@ -46,8 +46,7 @@ class UserDBManager:
         """Serialize data to a JSON string."""
         if 'request_string' in data:
             return json.dumps(data['request_string'])
-        else:
-            raise KeyError("Error parsing key")
+        raise KeyError("Error parsing key")
 
 
     def deserialize_data(self, data_str):
