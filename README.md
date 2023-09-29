@@ -28,3 +28,6 @@ Since we hate an SPOF, we also have CS slaves which also go in sync with the CS.
 4. The original Secure User String is securely hashed and stored in the user's data store for authentication and identification purposes.
 
 ![sus_db_design](images/diagram_sus.png)
+
+Find docs here [IR SUS-DB Documentation](https://ir-susdb.netlify.app/)
+
