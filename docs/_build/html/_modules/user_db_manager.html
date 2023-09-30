@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>user_db_manager &mdash; sus-db  documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            sus-db
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">sus-db</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">user_db_manager</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for user_db_manager</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="sd">&quot;&quot;&quot;Module to store hashed user strings in dbm and retrive secure user strings&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">dbm</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">import</span> <span class="nn">base64</span>
+<span class="kn">import</span> <span class="nn">argon2</span>
+<span class="kn">from</span> <span class="nn">dotenv</span> <span class="kn">import</span> <span class="n">load_dotenv</span>
+<span class="kn">from</span> <span class="nn">argon2</span> <span class="kn">import</span> <span class="n">PasswordHasher</span>
+
+<span class="n">load_dotenv</span><span class="p">()</span>
+
+<div class="viewcode-block" id="UserDBManager">
+<a class="viewcode-back" href="../user_db_manager.html#user_db_manager.UserDBManager">[docs]</a>
+<span class="k">class</span> <span class="nc">UserDBManager</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Main DB Manager for IRs.</span>
+
+<span class="sd">    This class manages user-specific databases, allowing for the storage and retrieval</span>
+<span class="sd">    of hashed and secured user strings.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        secret_key (bytes): Secret key used for encryption and integrity verification.</span>
+<span class="sd">        get_path (str): Path to the directory where user-specific databases are stored.</span>
+<span class="sd">        unique_identifier (str): Unique identifier for this instance.</span>
+<span class="sd">        file_name (str): Name of the database file, including the unique identifier.</span>
+<span class="sd">        file_path (str): Full path to the database file.</span>
+
+<span class="sd">    Methods:</span>
+<span class="sd">        __init__(): Initialize the Storage instance with a unique identifier.</span>
+<span class="sd">        initialize_db(): Initialize the user-specific database if it doesn&#39;t exist.</span>
+<span class="sd">        _initialize_user_db(): Initialize the keys in the user-specific database.</span>
+<span class="sd">        serialize_data(data): Serialize data to a JSON string.</span>
+<span class="sd">        deserialize_data(data_str): Deserialize a JSON string to the original data.</span>
+<span class="sd">        hash_user_string(user_str): Hash the user string using argon2.</span>
+<span class="sd">        store_user_string(request_data): Store user string after encryption and generate</span>
+<span class="sd">                                        secure user string using b64 encoding.</span>
+<span class="sd">        verify_credential(user_string): Check validity of user string against hash.</span>
+<span class="sd">        display_user_db(): Display the contents of the user-specific database.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the SecureUserStorage instance with a unique identifier.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">secret_key</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;HMAC_SECRET_KEY&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;GET_PATH&quot;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unique_identifier</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;user_db_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">unique_identifier</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">initialize_db</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="UserDBManager.initialize_db">
+<a class="viewcode-back" href="../user_db_manager.html#user_db_manager.UserDBManager.initialize_db">[docs]</a>
+    <span class="k">def</span> <span class="nf">initialize_db</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the user-specific database if it doesn&#39;t exist.&quot;&quot;&quot;</span>
+        <span class="c1"># Ensure the directory exists or create it</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Create an empty file named &#39;user_db&#39; inside the directory</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">):</span>
+            <span class="k">pass</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_user_db</span><span class="p">()</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_initialize_user_db</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the keys in the user-specific database.&quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="n">dbm</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;n&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">individual_store</span><span class="p">:</span>
+            <span class="n">individual_store</span><span class="p">[</span><span class="s1">&#39;_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span>
+            <span class="n">individual_store</span><span class="p">[</span><span class="s1">&#39;hash_string&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span>
+            <span class="n">individual_store</span><span class="p">[</span><span class="s1">&#39;secured_user_string&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span>
+
+<div class="viewcode-block" id="UserDBManager.serialize_data">
+<a class="viewcode-back" href="../user_db_manager.html#user_db_manager.UserDBManager.serialize_data">[docs]</a>
+    <span class="k">def</span> <span class="nf">serialize_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Serialize data to a JSON string.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="s1">&#39;request_string&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;request_string&#39;</span><span class="p">])</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s2">&quot;Error parsing key&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="UserDBManager.deserialize_data">
+<a class="viewcode-back" href="../user_db_manager.html#user_db_manager.UserDBManager.deserialize_data">[docs]</a>
+    <span class="k">def</span> <span class="nf">deserialize_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Deserialize a JSON string to the original data.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">data_str</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="UserDBManager.hash_user_string">
+<a class="viewcode-back" href="../user_db_manager.html#user_db_manager.UserDBManager.hash_user_string">[docs]</a>
+    <span class="k">def</span> <span class="nf">hash_user_string</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Hash the user string using argon2&quot;&quot;&quot;</span>
+        <span class="n">user_str_bytes</span> <span class="o">=</span> <span class="n">user_str</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+        <span class="n">p_hash</span> <span class="o">=</span> <span class="n">PasswordHasher</span><span class="p">()</span>
+        <span class="n">hashed_user_string</span> <span class="o">=</span> <span class="n">p_hash</span><span class="o">.</span><span class="n">hash</span><span class="p">(</span><span class="n">user_str_bytes</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">hashed_user_string</span></div>
+
+
+<div class="viewcode-block" id="UserDBManager.store_user_string">
+<a class="viewcode-back" href="../user_db_manager.html#user_db_manager.UserDBManager.store_user_string">[docs]</a>
+    <span class="k">def</span> <span class="nf">store_user_string</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request_data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Store user string after encryption and generate</span>
+<span class="sd">        secure user string using b64 encoding </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">serialize_data</span><span class="p">(</span><span class="n">request_data</span><span class="p">)</span>
+
+        <span class="n">user_hash</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hash_user_string</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="n">dbm</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">individual_store</span><span class="p">:</span>
+            <span class="n">individual_store</span><span class="p">[</span><span class="s1">&#39;hash_string&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">user_hash</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8)&#39;</span><span class="p">)</span>
+
+            <span class="n">hash_string</span> <span class="o">=</span> <span class="n">individual_store</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;hash_string&#39;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">hash_string</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">secure_user_string</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">urlsafe_b64encode</span><span class="p">(</span><span class="n">hash_string</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)[</span><span class="mi">12</span><span class="p">:</span><span class="mi">24</span><span class="p">]</span>
+                <span class="n">individual_store</span><span class="p">[</span><span class="s1">&#39;secured_user_string&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">secure_user_string</span>
+                <span class="n">individual_store</span><span class="p">[</span><span class="s1">&#39;_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unique_identifier</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="UserDBManager.verify_credential">
+<a class="viewcode-back" href="../user_db_manager.html#user_db_manager.UserDBManager.verify_credential">[docs]</a>
+    <span class="k">def</span> <span class="nf">verify_credential</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_string</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check validity of user string against hash&quot;&quot;&quot;</span>
+        <span class="n">p_hash</span> <span class="o">=</span> <span class="n">PasswordHasher</span><span class="p">()</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">serialize_data</span><span class="p">(</span><span class="n">user_string</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="n">dbm</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">individual_store</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">user_hash</span> <span class="o">=</span> <span class="n">individual_store</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;hash_string&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s2">&quot;User hash not found in the database.&quot;</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">check_validity</span> <span class="o">=</span> <span class="n">p_hash</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="n">user_hash</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">argon2</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">VerifyMismatchError</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s2">&quot;User string does not match the stored hash.&quot;</span>
+
+            <span class="k">if</span> <span class="n">check_validity</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s2">&quot;Success&quot;</span>
+            <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="UserDBManager.display_user_db">
+<a class="viewcode-back" href="../user_db_manager.html#user_db_manager.UserDBManager.display_user_db">[docs]</a>
+    <span class="k">def</span> <span class="nf">display_user_db</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Display the contents of the user-specific database.&quot;&quot;&quot;</span>
+        <span class="n">view_db</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">with</span> <span class="n">dbm</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">individual_store</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">individual_store</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">key_str</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">UnicodeDecodeError</span><span class="p">:</span>
+                    <span class="n">key_str</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">hex</span><span class="p">()</span>
+
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">value_str</span> <span class="o">=</span> <span class="n">individual_store</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">UnicodeDecodeError</span><span class="p">:</span>
+                    <span class="n">value_str</span> <span class="o">=</span> <span class="n">individual_store</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">hex</span><span class="p">()</span>
+
+                <span class="n">view_db</span><span class="p">[</span><span class="n">key_str</span><span class="p">]</span> <span class="o">=</span> <span class="n">value_str</span>
+        <span class="k">return</span> <span class="n">view_db</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Michael Appiah Dankwah(Terre8055).</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,36 @@
+name: sus-spider
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  check_print_statements:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version:
+          - "3.8"
+          - "3.9"
+          - "3.10"
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Upgrade pip
+      run: pip install --upgrade pip
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+    - name: Check for print statements
+      run: |
+        print_statements=$(grep -rn "print(" src/)
+        if [[ -n "$print_statements" ]]; then
+          echo "Print statements found:"
+          echo "$print_statements"
+          exit 1
+        else
+          echo "No print statements found."
+        fi
