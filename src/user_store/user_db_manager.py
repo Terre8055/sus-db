@@ -40,6 +40,7 @@ class UserDBManager:
         get_file_path: Retrieve store path on file.
         get_file_name: Retrieve store name on file.
         get_uuid: Retrieve store id on file.
+        verify_user: locate db file on disk and verify user using uid
     """
 
     def __init__(self):
@@ -102,13 +103,18 @@ class UserDBManager:
 
             hash_string = individual_store.get('hash_string')
 
+            current_datetime = datetime.datetime.now()
+            formatted_datetime = current_datetime.strftime("%Y-%m-%dT%H:%M:%S.%f")
+
+            cur_date = datetime.datetime.strptime(formatted_datetime, "%Y-%m-%dT%H:%M:%S.%f")
+
             if hash_string is not None:
                 secure_user_string = base64.urlsafe_b64encode(hash_string).decode('utf-8')[12:24]
                 individual_store['secured_user_string'] = secure_user_string
                 individual_store['_id'] = self.__unique_identifier.encode('utf-8')
-                individual_store['created_on'] = datetime.datetime.now().encode('utf-8')
+                individual_store['created_on'] = str(cur_date).encode('utf-8')
 
-    def verify_credential(self, user_string):
+    def __verify_credential(self, user_string):
         """Check validity of user string against hash"""
         p_hash = PasswordHasher()
         data = self.serialize_data(user_string)
@@ -127,6 +133,37 @@ class UserDBManager:
             if check_validity:
                 return "Success"
             return None
+    
+    def verify_user(self, request_data):
+        """Locate the DB file by UID and verify credentials."""
+        p_hash = PasswordHasher()
+        uid = request_data.get('uid')
+
+        if not uid:
+            return "UID not provided in the request."
+
+        file_name = f"user_db_{uid}"
+        file_path = os.path.join(self.__get_path, file_name)
+        user_string = self.serialize_data(request_data)
+
+        if os.path.exists(file_path):
+            with dbm.open(file_path, 'r') as individual_store:
+                try:
+                    user_hash = individual_store.get("hash_string").decode("utf-8")
+                except KeyError:
+                    return "User hash not found in the database."
+
+                try:
+                    check_validity = p_hash.verify(user_hash, user_string)
+                except argon2.exceptions.VerifyMismatchError:
+                    return "User string does not match the stored hash."
+
+                if check_validity:
+                    return f"User authenticated successfully for UID: {uid}"
+                
+                return None
+        else:
+            return f"No database found for UID: {uid}"
 
     def display_user_db(self):
         """Display the contents of the user-specific database."""
