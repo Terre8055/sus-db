@@ -37,32 +37,34 @@ class UserDBManager:
                                         secure user string using b64 encoding.
         verify_credential(user_string): Check validity of user string against hash.
         display_user_db(): Display the contents of the user-specific database.
-        get_store_path: Retrieve store path on file.
+        get_file_path: Retrieve store path on file.
+        get_file_name: Retrieve store name on file.
+        get_uuid: Retrieve store id on file.
     """
 
     def __init__(self):
         """Initialize the SecureUserStorage instance with a unique identifier."""
-        self.get_path = os.path.expanduser(os.getenv("GET_PATH"))
-        self.unique_identifier = str(uuid.uuid4())
-        self.file_name = f"user_db_{self.unique_identifier}"
-        self.file_path = os.path.join(self.get_path, self.file_name)
+        self.__get_path = os.path.expanduser(os.getenv("GET_PATH"))
+        self.__unique_identifier = str(uuid.uuid4())
+        self.__file_name = f"user_db_{self.__unique_identifier}"
+        self.__file_path = os.path.join(self.__get_path, self.__file_name)
         self.initialize_db()
 
 
     def initialize_db(self):
         """Initialize the user-specific database if it doesn't exist."""
         # Ensure the directory exists or create it
-        os.makedirs(self.get_path, exist_ok=True)
+        os.makedirs(self.__get_path, exist_ok=True)
 
         # Create an empty file named 'user_db' inside the directory
-        with open(self.file_path, 'w', encoding="utf-8"):
+        with open(self.__file_path, 'w', encoding="utf-8"):
             pass
 
-        self._initialize_user_db()
+        self.__initialize_user_db()
 
-    def _initialize_user_db(self):
+    def __initialize_user_db(self):
         """Initialize the keys in the user-specific database."""
-        with dbm.open(self.file_path, 'n') as individual_store:
+        with dbm.open(self.__file_path, 'n') as individual_store:
             individual_store['_id'] = b''
             individual_store['hash_string'] = b''
             individual_store['secured_user_string'] = b''
@@ -95,7 +97,7 @@ class UserDBManager:
 
         user_hash = self.hash_user_string(data)
 
-        with dbm.open(self.file_path, 'w') as individual_store:
+        with dbm.open(self.__file_path, 'w') as individual_store:
             individual_store['hash_string'] = user_hash.encode('utf-8)')
 
             hash_string = individual_store.get('hash_string')
@@ -103,7 +105,7 @@ class UserDBManager:
             if hash_string is not None:
                 secure_user_string = base64.urlsafe_b64encode(hash_string).decode('utf-8')[12:24]
                 individual_store['secured_user_string'] = secure_user_string
-                individual_store['_id'] = self.unique_identifier.encode('utf-8')
+                individual_store['_id'] = self.__unique_identifier.encode('utf-8')
                 individual_store['created_on'] = datetime.datetime.now().encode('utf-8')
 
     def verify_credential(self, user_string):
@@ -111,7 +113,7 @@ class UserDBManager:
         p_hash = PasswordHasher()
         data = self.serialize_data(user_string)
 
-        with dbm.open(self.file_path, 'r') as individual_store:
+        with dbm.open(self.__file_path, 'r') as individual_store:
             try:
                 user_hash = individual_store.get("hash_string").decode("utf-8")
             except KeyError:
@@ -129,7 +131,7 @@ class UserDBManager:
     def display_user_db(self):
         """Display the contents of the user-specific database."""
         view_db = {}
-        with dbm.open(self.file_path, 'r') as individual_store:
+        with dbm.open(self.__file_path, 'r') as individual_store:
             for key in individual_store.keys():
                 try:
                     key_str = key.decode('utf-8')
@@ -145,6 +147,18 @@ class UserDBManager:
         return view_db
 
     @property
-    def get_store_path(self):
+    def get_file_path(self):
         """Retrive store path"""
-        return self.file_path
+        return self.__file_path
+
+
+    @property
+    def get_file_name(self):
+        """Retrive store file name"""
+        return self.__file_name
+
+
+    @property
+    def get_uuid(self):
+        """Retrive store id"""
+        return self.__unique_identifier
