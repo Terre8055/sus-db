@@ -11,3 +11,6 @@ r = redis.Redis(host=os.getenv("HOST"), port=os.getenv("REDIS_PORT"), decode_res
 
 class CentralStore(user_db_manager.UserDBManager):
     """Initialise main store for real-time syncing"""
+    def __init__(self):
+        self.name = "REDIS"
+        super().__init__()
