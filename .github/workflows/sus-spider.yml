@@ -1,0 +1,36 @@
+name: sus-spider
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  check_print_statements:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Check for print statements
+      run: |
+        # Use grep to find print statements in Python files
+        print_statements=$(find . -name "*.py" | xargs grep -nH "print(")
+
+        # Check if any print statements were found
+        if [[ -n "$print_statements" ]]; then
+          echo "Print statements found:"
+          echo "$print_statements"
+          exit 1  # Exit with a non-zero status to indicate failure
+        else
+          echo "No print statements found."
+        fi
