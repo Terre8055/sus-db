@@ -4,6 +4,7 @@ import os
 import dbm
 import json
 import uuid
+import datetime
 import base64
 import argon2
 from dotenv import load_dotenv
@@ -36,6 +37,7 @@ class UserDBManager:
                                         secure user string using b64 encoding.
         verify_credential(user_string): Check validity of user string against hash.
         display_user_db(): Display the contents of the user-specific database.
+        get_store_path: Retrieve store path on file.
     """
 
     def __init__(self):
@@ -64,6 +66,7 @@ class UserDBManager:
             individual_store['_id'] = b''
             individual_store['hash_string'] = b''
             individual_store['secured_user_string'] = b''
+            individual_store['created_on'] = b''
 
     def serialize_data(self, data):
         """Serialize data to a JSON string."""
@@ -101,6 +104,7 @@ class UserDBManager:
                 secure_user_string = base64.urlsafe_b64encode(hash_string).decode('utf-8')[12:24]
                 individual_store['secured_user_string'] = secure_user_string
                 individual_store['_id'] = self.unique_identifier.encode('utf-8')
+                individual_store['created_on'] = datetime.datetime.now().encode('utf-8')
 
     def verify_credential(self, user_string):
         """Check validity of user string against hash"""
@@ -139,3 +143,8 @@ class UserDBManager:
 
                 view_db[key_str] = value_str
         return view_db
+
+    @property
+    def get_store_path(self):
+        """Retrive store path"""
+        return self.file_path
