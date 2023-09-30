@@ -8,4 +8,4 @@ load_dotenv()
 
 r = redis.Redis(host=os.getenv("HOST"), port=os.getenv("REDIS_PORT"), decode_responses=True)
 
-print('v', r)
+print(r)
