@@ -39,7 +39,7 @@ class UserDBManager:
         display_user_db(): Display the contents of the user-specific database.
         get_file_path: Retrieve store path on file.
         get_file_name: Retrieve store name on file.
-        get_uuid: Retrieve store id on file.
+        pk: Retrieve store id on file.
         verify_user: locate db file on disk and verify user using uid
     """
 
@@ -196,6 +196,6 @@ class UserDBManager:
 
 
     @property
-    def get_uuid(self):
+    def pk(self):
         """Retrive store id"""
         return self.__unique_identifier
