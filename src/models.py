@@ -1,56 +1,75 @@
 """Base Module to sync with individual stores (IRs)"""
-import os
 import datetime
-from redis_om import get_redis_connection, EmbeddedJsonModel, JsonModel, Field, Migrator
-from dotenv import load_dotenv
+from redis_om import EmbeddedJsonModel, JsonModel, Field, Migrator
+from pydantic import FilePath
+from user_store.user_db_manager import UserDBManager
+from settings import redis
 
 
-load_dotenv()
+class Address(EmbeddedJsonModel):
+    """Address Model"""
+    address_line: str = Field(index=True, full_text_search=True)
+    street: str
+    city: str
+    state: str
+    country : str 
 
-redis = get_redis_connection(
-    host=os.getenv('HOST'),
-    port=os.getenv('PORT'),
-    password=os.getenv('PASSWORD'),
-    decode_responses=True,
-)
+    class Meta:
+        """Define additional configuraion"""
+        database = redis
+
+    def __str__(self):
+        """Method to retrive complete address from model"""
+        address = ""
+        if self.address_line:
+            address += self.address_line
+        if self.street:
+            if address:
+                address += ", " + self.street
+            else:
+                address += self.street
+        if self.city:
+            if address:
+                address += ", " + self.city
+            else:
+                address += self.city
+        if self.state:
+            if address:
+                address += ", " + self.state
+            else:
+                address += self.state
+        if self.country:
+            if address:
+                address += self.country
+        return address
 
 
-class Author(EmbeddedJsonModel):
+class User(JsonModel, UserDBManager):
+    """User Model"""
     first_name: str = Field(index=True, full_text_search=True)
     last_name: str
+    username:str = Field(default='admin000')
+    title:str
+    is_authenticated: bool = Field(default=False)
+    is_authorized: bool = Field(default=False)
+    profile_pic: FilePath
     email: str
+    is_admin : bool = Field(default=True)
+    phone : str = Field(default="+1(000)0000-000")
+    website: str
     bio: str
     date_joined: datetime.date = Field(default=datetime.datetime.now())
+    address: Address
 
     class Meta:
+        """Define additional configuraion"""
         database = redis
 
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}"
 
-class Blog(JsonModel):
-    title: str = Field(index=True, full_text_search=True)
-    content: str
-    author: Author
-    date_posted: datetime.date = Field(
-        default=datetime.datetime.today().strftime("%Y-%m-%d")
-    )
-
-    class Meta:
-        database = redis
 
 
 Migrator().run()
 
-req = {
-  "title": "Sample Blog Title",
-  "content": "This is the content of the blog post. Lorem ipsum...",
-  "author": {
-    "first_name": "John",
-    "last_name": "Doe",
-    "email": "john.doe@example.com",
-    "bio": "A passionate writer and blogger.",
-    "date_joined": "2022-01-01"
-  },
-}
 
-k = Blog(**req)
-k.save()
