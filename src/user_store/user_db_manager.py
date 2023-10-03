@@ -9,6 +9,9 @@ import base64
 import argon2
 from dotenv import load_dotenv
 from argon2 import PasswordHasher
+from settings import (
+    get_path,
+)
 
 load_dotenv()
 
@@ -45,7 +48,7 @@ class UserDBManager:
 
     def __init__(self):
         """Initialize the SecureUserStorage instance with a unique identifier."""
-        self.__get_path = os.path.expanduser(os.getenv("GET_PATH"))
+        self.__get_path = os.path.expanduser(get_path)
         self.__unique_identifier = str(uuid.uuid4())
         self.__file_name = f"user_db_{self.__unique_identifier}"
         self.__file_path = os.path.join(self.__get_path, self.__file_name)
