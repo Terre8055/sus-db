@@ -14,7 +14,6 @@ redis = get_redis_connection(
     decode_responses=True,
 )
 
-
 # DBM CONFIGURATION
 db_file_name = os.getenv('FILE_NAME')
 get_path = os.getenv('GET_PATH')
