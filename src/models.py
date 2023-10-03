@@ -1,10 +1,13 @@
 """Base Module to sync with individual stores (IRs)"""
 import datetime
+from typing import Optional
 from redis_om import EmbeddedJsonModel, JsonModel, Field, Migrator
 from pydantic import FilePath
 from user_store.user_db_manager import UserDBManager
 from settings import redis
 
+
+print(redis)
 
 class Address(EmbeddedJsonModel):
     """Address Model"""
@@ -44,6 +47,73 @@ class Address(EmbeddedJsonModel):
         return address
 
 
+class Account(JsonModel):
+    """Account model to be associated with transactions"""
+    account_name : str = Field(index=True, full_text_search=True, max_length=64)
+    organization_number : str
+    priority : Optional[str]
+    annual_revenue : Optional[str]
+    phone : Optional[str]
+    address : Address
+    category : str
+    is_owner: bool = Field(default=False)
+    website : Optional[str]
+    description : str
+    created_on : datetime.date = Field(default=datetime.datetime.now())
+    is_active : bool = Field(default=True)
+    tags : Optional[str]
+    status : str
+
+
+    class Meta:
+        """Define additional configuraion"""
+        database = redis
+
+
+    def __str__(self):
+        """Representation of account model"""
+        return f"{self.account_name}"
+
+
+class Billing(EmbeddedJsonModel):
+    """Customer Billing Info Model"""
+    billing_address_line : str
+    billing_street : str
+    billing_city : str
+    billing_state : str
+    billing_postcode : str
+    billing_country : str
+
+    class Meta:
+        """Define additional configuraion"""
+        database = redis
+
+    def __str__(self):
+        """Method to retrive complete address from model"""
+        billing_address = ""
+        if self.billing_address_line:
+            billing_address += self.billing_address_line
+        if self.billing_street:
+            if billing_address:
+                billing_address += ", " + self.billing_street
+            else:
+                billing_address += self.billing_street
+        if self.billing_city:
+            if billing_address:
+                billing_address += ", " + self.billing_city
+            else:
+                billing_address += self.billing_city
+        if self.billing_state:
+            if billing_address:
+                billing_address += ", " + self.billing_state
+            else:
+                billing_address += self.billing_state
+        if self.billing_country:
+            if billing_address:
+                billing_address += self.billing_country
+        return billing_address
+
+
 class User(JsonModel, UserDBManager):
     """User Model"""
     first_name: str = Field(index=True, full_text_search=True)
@@ -60,6 +130,7 @@ class User(JsonModel, UserDBManager):
     bio: str
     date_joined: datetime.date = Field(default=datetime.datetime.now())
     address: Address
+    billing: Billing
 
     class Meta:
         """Define additional configuraion"""
