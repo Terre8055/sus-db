@@ -5,6 +5,7 @@ from redis_om import get_redis_connection
 
 
 load_dotenv()
+# REDIS CLOUD CONN
 
 redis = get_redis_connection(
     host=os.getenv('HOST'),
@@ -12,3 +13,7 @@ redis = get_redis_connection(
     password=os.getenv('PASSWORD'),
     decode_responses=True,
 )
+
+# DBM CONFIGURATION
+db_file_name = os.getenv('FILE_NAME')
+get_path = os.getenv('GET_PATH')

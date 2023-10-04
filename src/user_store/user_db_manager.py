@@ -1,4 +1,4 @@
-"""Module to store hashed user strings in dbm and retrive secure user strings"""
+"""Module to store hashed user strings in dbm and retrieve secure user strings"""
 
 import os
 import dbm
@@ -9,8 +9,10 @@ import base64
 import argon2
 from dotenv import load_dotenv
 from argon2 import PasswordHasher
+from src.settings import get_path
 
 load_dotenv()
+
 
 class UserDBManager:
     """
@@ -20,11 +22,10 @@ class UserDBManager:
     of hashed and secured user strings.
 
     Attributes:
-        secret_key (bytes): Secret key used for encryption and integrity verification.
-        get_path (str): Path to the directory where user-specific databases are stored.
-        unique_identifier (str): Unique identifier for this instance.
-        file_name (str): Name of the database file, including the unique identifier.
-        file_path (str): Full path to the database file.
+        __get_path (str): Path to the directory where user-specific databases are stored.
+        __unique_identifier (str): Unique identifier for this instance.
+        __file_name (str): Name of the database file, including the unique identifier.
+        __file_path (str): Full path to the database file.
 
     Methods:
         __init__(): Initialize the Storage instance with a unique identifier.
@@ -44,13 +45,12 @@ class UserDBManager:
     """
 
     def __init__(self):
-        """Initialize the SecureUserStorage instance with a unique identifier."""
-        self.__get_path = os.path.expanduser(os.getenv("GET_PATH"))
+        """Initialize the user storage instance with a unique identifier attached to file name."""
+        self.__get_path = os.path.expanduser(get_path)
         self.__unique_identifier = str(uuid.uuid4())
         self.__file_name = f"user_db_{self.__unique_identifier}"
         self.__file_path = os.path.join(self.__get_path, self.__file_name)
         self.initialize_db()
-
 
     def initialize_db(self):
         """Initialize the user-specific database if it doesn't exist."""
@@ -71,53 +71,50 @@ class UserDBManager:
             individual_store['secured_user_string'] = b''
             individual_store['created_on'] = b''
 
-    def serialize_data(self, data):
-        """Serialize data to a JSON string."""
-        if 'request_string' in data:
-            return json.dumps(data['request_string'])
+    def serialize_data(self, request_data):
+        """Serialize incoming data to a JSON string."""
+        if 'request_string' in request_data:
+            return json.dumps(request_data['request_string'])
         raise KeyError("Error parsing key")
 
-
-    def deserialize_data(self, data_str):
+    def deserialize_data(self, response_data):
         """Deserialize a JSON string to the original data."""
-        return json.loads(data_str)
+        return json.loads(response_data)
 
-    def hash_user_string(self, user_str):
+    def hash_user_string(self, user_string):
         """Hash the user string using argon2"""
-        user_str_bytes = user_str.encode('utf-8')
-        p_hash = PasswordHasher()
-        hashed_user_string = p_hash.hash(user_str_bytes)
+        user_string_bytes = user_string.encode('utf-8')
+        passwd_hash = PasswordHasher()
+        hashed_user_string = passwd_hash.hash(user_string_bytes)
         return hashed_user_string
 
     def store_user_string(self, request_data):
         """Store user string after encryption and generate
-        secure user string using b64 encoding 
+        secure user string using base64 encoding
         """
-
-        data = self.serialize_data(request_data)
-
-        user_hash = self.hash_user_string(data)
+        serialised_data = self.serialize_data(request_data)
+        user_hash = self.hash_user_string(serialised_data)
 
         with dbm.open(self.__file_path, 'w') as individual_store:
             individual_store['hash_string'] = user_hash.encode('utf-8)')
-
             hash_string = individual_store.get('hash_string')
 
             current_datetime = datetime.datetime.now()
             formatted_datetime = current_datetime.strftime("%Y-%m-%dT%H:%M:%S.%f")
-
-            cur_date = datetime.datetime.strptime(formatted_datetime, "%Y-%m-%dT%H:%M:%S.%f")
+            current_date = datetime.datetime.strptime(
+                formatted_datetime, "%Y-%m-%dT%H:%M:%S.%f"
+            )
 
             if hash_string is not None:
                 secure_user_string = base64.urlsafe_b64encode(hash_string).decode('utf-8')[12:24]
                 individual_store['secured_user_string'] = secure_user_string
                 individual_store['_id'] = self.__unique_identifier.encode('utf-8')
-                individual_store['created_on'] = str(cur_date).encode('utf-8')
+                individual_store['created_on'] = str(current_date).encode('utf-8')
 
-    def __verify_credential(self, user_string):
+    def __verify_credential(self, request_data):
         """Check validity of user string against hash"""
-        p_hash = PasswordHasher()
-        data = self.serialize_data(user_string)
+        passwd_hash = PasswordHasher()
+        user_data = self.serialize_data(request_data)
 
         with dbm.open(self.__file_path, 'r') as individual_store:
             try:
@@ -126,7 +123,7 @@ class UserDBManager:
                 return "User hash not found in the database."
 
             try:
-                check_validity = p_hash.verify(user_hash, data)
+                check_validity = passwd_hash.verify(user_hash, user_data)
             except argon2.exceptions.VerifyMismatchError:
                 return "User string does not match the stored hash."
 
@@ -135,14 +132,14 @@ class UserDBManager:
             return None
     
     def verify_user(self, request_data):
-        """Locate the DB file by UID and verify credentials."""
-        p_hash = PasswordHasher()
-        uid = request_data.get('uid')
+        """Locate the DB file by UID and verify user credentials."""
+        passwd_hash = PasswordHasher()
+        user_id = request_data.get('uid')
 
-        if not uid:
+        if not user_id:
             return "UID not provided in the request."
 
-        file_name = f"user_db_{uid}"
+        file_name = f"user_db_{user_id}"
         file_path = os.path.join(self.__get_path, file_name)
         user_string = self.serialize_data(request_data)
 
@@ -154,48 +151,46 @@ class UserDBManager:
                     return "User hash not found in the database."
 
                 try:
-                    check_validity = p_hash.verify(user_hash, user_string)
+                    check_validity = passwd_hash.verify(user_hash, user_string)
                 except argon2.exceptions.VerifyMismatchError:
                     return "User string does not match the stored hash."
 
                 if check_validity:
-                    return f"User authenticated successfully for UID: {uid}"
+                    return f"User authenticated successfully for UID: {user_id}"
                 
                 return None
         else:
-            return f"No database found for UID: {uid}"
+            return f"No database found for UID: {user_id}"
 
     def display_user_db(self):
         """Display the contents of the user-specific database."""
-        view_db = {}
+        view_database = {}
         with dbm.open(self.__file_path, 'r') as individual_store:
             for key in individual_store.keys():
                 try:
-                    key_str = key.decode('utf-8')
+                    key_string = key.decode('utf-8')
                 except UnicodeDecodeError:
-                    key_str = key.hex()
+                    key_string = key.hex()
 
                 try:
-                    value_str = individual_store[key].decode('utf-8')
+                    value_string = individual_store[key].decode('utf-8')
                 except UnicodeDecodeError:
-                    value_str = individual_store[key].hex()
+                    value_string = individual_store[key].hex()
 
-                view_db[key_str] = value_str
-        return view_db
+                view_database[key_string] = value_string
+        return view_database
 
     @property
     def get_file_path(self):
-        """Retrive store path"""
+        """Retrieve store path"""
         return self.__file_path
-
 
     @property
     def get_file_name(self):
-        """Retrive store file name"""
+        """Retrieve store file name"""
         return self.__file_name
-
 
     @property
     def pk(self):
-        """Retrive store id"""
+        """Retrieve store id"""
         return self.__unique_identifier
