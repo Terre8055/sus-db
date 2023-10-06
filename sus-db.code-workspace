@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"mypy.configFile": "mypy.ini",
+		"mypy.targets": [
+			"src"
+		]
+	}
+}
