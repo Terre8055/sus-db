@@ -4,8 +4,7 @@ from typing import Optional
 from redis_om import EmbeddedJsonModel, JsonModel, Field, Migrator
 from pydantic import FilePath
 from user_store.user_db_manager import UserDBManager
-from settings import redis
-
+from src import redis
 
 class Address(EmbeddedJsonModel):
     """Address Model"""
@@ -19,7 +18,7 @@ class Address(EmbeddedJsonModel):
         """Define additional configuration"""
         database = redis
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Method to retrieve complete address from model"""
         address = ""
         if self.address_line:
@@ -66,7 +65,7 @@ class Account(JsonModel):
         """Define additional configuration"""
         database = redis
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Representation of account model"""
         return f"{self.account_name}"
 
@@ -84,7 +83,7 @@ class Billing(EmbeddedJsonModel):
         """Define additional configuration"""
         database = redis
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Method to retrieve complete address from model"""
         billing_address = ""
         if self.billing_address_line:
@@ -132,7 +131,7 @@ class User(JsonModel, UserDBManager):
         """Define additional configuration"""
         database = redis
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.first_name} {self.last_name}"
 
 
