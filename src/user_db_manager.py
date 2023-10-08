@@ -73,16 +73,41 @@ class UserDBManager:
             return json.dumps(req['request_string'])
         raise KeyError("Error parsing key")
 
-    def deserialize_data(
-            self,
-            response_data: Union[str, bytes, bytearray]) \
-            -> Dict[str, str]:
-        """Deserialize a JSON string to the original data.
+    def fetch_user_data(self, uid: str, key: str) -> Optional[Union[str, bytes]]:
+        """Fetch specific user data from the database.
+
+        Args:
+            key (str): The key to fetch the data.
 
         Returns:
-            Dict[str, str]: The original data represented as a dictionary.
+            Optional[Union[str, bytes]]: The data associated with the key, or None
         """
-        return json.loads(response_data)
+        file_name = f"user_db_{uid}"
+        file_path = os.path.join(self.__get_path, file_name)
+        if os.path.exists(file_path):
+            with dbm.open(file_path, 'r') as individual_store:
+                try:
+                    user_data_bytes = individual_store.get(key.encode('utf-8'))
+                    if user_data_bytes is not None:
+                        return user_data_bytes.decode('utf-8')
+                    return "error"
+                except KeyError:
+                    print('Associated key not found')
+                    return None
+        return None
+
+    def deserialize_data(self, uid: str, key: str) -> Optional[Union[str, bytes]]:
+        """Fetch and deserialize user data from the database using a specific key.
+
+        Args:
+            key (str): The key to fetch and deserialize data.
+
+        Returns:
+            Optional[Union[str, bytes]]: The deserialized data associated with the key
+        """
+        user_id = uid
+        user_data = self.fetch_user_data(user_id, key)
+        return user_data
 
     def hash_user_string(
             self,
@@ -125,8 +150,10 @@ class UserDBManager:
                     hash_string
                 ).decode('utf-8')[12:24]
                 individual_store['secured_user_string'] = secure_user_string
-                individual_store['_id'] = self.__unique_identifier.encode('utf-8')
-                individual_store['created_on'] = str(current_date).encode('utf-8')
+                individual_store['_id'] = self.__unique_identifier.encode(
+                    'utf-8')
+                individual_store['created_on'] = str(
+                    current_date).encode('utf-8')
 
     def verify_user(
             self,

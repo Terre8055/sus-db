@@ -2,5 +2,9 @@
     "mypy.targets": [
         "src"
     ],
-    "mypy.configFile": "mypy.ini"
+    "mypy.configFile": "mypy.ini",
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.autopep8"
+    },
+    "python.formatting.provider": "none"
 }
