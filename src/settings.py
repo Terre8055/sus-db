@@ -1,8 +1,7 @@
 """Module for user-defined configurations"""
 import os
-from dotenv import load_dotenv
-from redis_om import get_redis_connection
 
+from dotenv import load_dotenv
 
 load_dotenv()
 
