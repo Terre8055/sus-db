@@ -54,7 +54,7 @@ class UserDBManager:
     def __init__(self) -> None:
         """Initialize the user storage instance
         with a unique identifier attached to file name."""
-        self.__get_path = os.path.expanduser(get_path)
+        self.__get_path = os.path.expanduser(get_path) if get_path else ''
         self.__unique_identifier = str(uuid.uuid4())
         self.__file_name = f"user_db_{self.__unique_identifier}"
         self.__file_path = os.path.join(self.__get_path, self.__file_name)
@@ -90,7 +90,7 @@ class UserDBManager:
 
     def deserialize_data(
             self,
-            response_data: Dict[str, str]) \
+            response_data: Union[str, bytes, bytearray]) \
             -> Dict[str, str]:
         """Deserialize a JSON string to the original data."""
         return json.loads(response_data)
@@ -153,9 +153,9 @@ class UserDBManager:
         if os.path.exists(file_path):
             with dbm.open(file_path, 'r') as individual_store:
                 try:
-                    user_hash = individual_store.get(
-                        "hash_string"
-                    ).decode("utf-8")
+                    user_hash_bytes = individual_store.get("hash_string")
+                    if user_hash_bytes is not None:
+                        user_hash = user_hash_bytes.decode('utf-8')
                 except KeyError:
                     return "User hash not found in the database."
 
@@ -172,24 +172,16 @@ class UserDBManager:
             return f"No database found for UID: {user_id}"
 
     def display_user_db(self) \
-            -> Dict[Union[str, Any],
-                    Union[str, Any]]:
-        # TODO to display a db, add an auth
+            -> Dict[str | bytes, str]:
         """Display the contents of the user-specific database."""
         view_database = {}
         with dbm.open(self.__file_path, 'r') as individual_store:
             for key in individual_store.keys():
                 try:
-                    key_string = key.decode('utf-8')
+                    view_database[key]=individual_store[key].decode('utf-8')
                 except UnicodeDecodeError:
-                    key_string = key.hex()
+                    view_database[key]=individual_store[key].hex()
 
-                try:
-                    value_string = individual_store[key].decode('utf-8')
-                except UnicodeDecodeError:
-                    value_string = individual_store[key].hex()
-
-                view_database[key_string] = value_string
         return view_database
 
     @property
