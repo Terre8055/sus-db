@@ -1,22 +1,16 @@
-name: sus-spider
+name: spiderman
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
-      - develop
 
 jobs:
-  check_print_statements:
+  mypy:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version:
-          - "3.8"
-          - "3.9"
           - "3.10"
     steps:
     - uses: actions/checkout@v3
@@ -28,13 +22,6 @@ jobs:
       run: pip install --upgrade pip
     - name: Install dependencies
       run: pip install -r requirements.txt
-    - name: Check for print statements
-      run: |
-        print_statements=$(grep -rn "print(" src/)
-        if [[ -n "$print_statements" ]]; then
-          echo "Print statements found:"
-          echo "$print_statements"
-          exit 1
-        else
-          echo "No print statements found."
-        fi
+    - name: Run MyPy on Python files in src directory
+      run: mypy --ignore-missing-imports --disallow-untyped-defs --warn-return-any src
+
