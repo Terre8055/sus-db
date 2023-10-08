@@ -9,7 +9,6 @@ import uuid
 from typing import (
     Dict,
     Union,
-    Any
 )
 
 import argon2
@@ -93,12 +92,15 @@ class UserDBManager:
             response_data: Union[str, bytes, bytearray]) \
             -> Dict[str, str]:
         """Deserialize a JSON string to the original data."""
+        #####################################################
+        #To deserialise, you are better off using the displaydb method 
+        #and extract with key for specific data.
         return json.loads(response_data)
 
     def hash_user_string(
             self,
             user_string: str) \
-            -> Union[str, Any]:
+            -> str:
         """Hash the user string using argon2"""
         user_string_bytes = user_string.encode('utf-8')
         passwd_hash = PasswordHasher()
@@ -178,9 +180,9 @@ class UserDBManager:
         with dbm.open(self.__file_path, 'r') as individual_store:
             for key in individual_store.keys():
                 try:
-                    view_database[key]=individual_store[key].decode('utf-8')
+                    view_database[key] = individual_store[key].decode('utf-8')
                 except UnicodeDecodeError:
-                    view_database[key]=individual_store[key].hex()
+                    view_database[key] = individual_store[key].hex()
 
         return view_database
 
