@@ -1,4 +1,4 @@
-"""Module to store hashed user strings in dbm"""
+"""Module to store hashed user strings in database"""
 
 import base64
 import datetime
@@ -9,7 +9,7 @@ import uuid
 from typing import (
     Dict,
     Union,
-    Any
+    Optional
 )
 
 import argon2
@@ -22,33 +22,10 @@ load_dotenv()
 
 
 class UserDBManager:
-    """
-    Main DB Manager for IRs.
+    """Main DB Manager for IRs.
 
-    This class manages user-specific databases, allowing
-    for the storage and retrieval of hashed and secured user strings.
-
-    Attributes:
-        __get_path (str): Path to the directory where user-specific databases are stored.
-        __unique_identifier (str): Unique identifier for this instance.
-        __file_name (str): Name of the database file, including the unique identifier.
-        __file_path (str): Full path to the database file.
-
-    Methods:
-        __init__(): Initialize the Storage instance with a unique identifier.
-        initialize_db(): Initialize the user-specific database if it doesn't exist.
-        _initialize_user_db(): Initialize the keys in the user-specific database.
-        serialize_data(data): Serialize data to a JSON string.
-        deserialize_data(data_str): Deserialize a JSON string to the original data.
-        hash_user_string(user_str): Hash the user string using argon2.
-        store_user_string(request_data): Store user string after encryption and generate
-                                        secure user string using b64 encoding.
-        verify_credential(user_string): Check validity of user string against hash.
-        display_user_db(): Display the contents of the user-specific database.
-        get_file_path: Retrieve store path on file.
-        get_file_name: Retrieve store name on file.
-        pk: Retrieve store id on file.
-        verify_user: locate db file on disk and verify user using uid
+    This class manages user-specific databases, allowing for the storage and retrieval
+    of hashed and secured user strings.
     """
 
     def __init__(self) -> None:
@@ -61,18 +38,19 @@ class UserDBManager:
         self.initialize_db()
 
     def initialize_db(self) -> None:
-        """Initialize the user-specific database if it doesn't exist."""
-        # Ensure the directory exists or create it
+        """Initialize the user-specific database if it doesn't exist.
+        Ensure the directory exists or create it
+        Creates an empty file named 'user_db<uid>' inside the directory
+        """
         os.makedirs(self.__get_path, exist_ok=True)
 
-        # Create an empty file named 'user_db' inside the directory
         with open(self.__file_path, 'w', encoding="utf-8"):
             pass
 
         self.__initialize_user_db()
 
     def __initialize_user_db(self) -> None:
-        """Initialize the keys in the user-specific database."""
+        """Initialize the keys in the user-specific database"""
         with dbm.open(self.__file_path, 'n') as individual_store:
             individual_store['_id'] = b''
             individual_store['hash_string'] = b''
@@ -83,7 +61,14 @@ class UserDBManager:
             self,
             req: Dict[str, str]) \
             -> str:
-        """Serialize incoming data to a JSON string."""
+        """Serialize incoming data to a JSON string.
+
+        Raises:
+            KeyError: Raises an error if `request_string` key not found
+
+        Returns:
+            str: A JSON string representing the serialized data
+        """
         if 'request_string' in req:
             return json.dumps(req['request_string'])
         raise KeyError("Error parsing key")
@@ -92,14 +77,22 @@ class UserDBManager:
             self,
             response_data: Union[str, bytes, bytearray]) \
             -> Dict[str, str]:
-        """Deserialize a JSON string to the original data."""
+        """Deserialize a JSON string to the original data.
+
+        Returns:
+            Dict[str, str]: The original data represented as a dictionary.
+        """
         return json.loads(response_data)
 
     def hash_user_string(
             self,
             user_string: str) \
-            -> Union[str, Any]:
-        """Hash the user string using argon2"""
+            -> str:
+        """Hash the user string using argon2
+
+        Returns:
+            str: The hashed user string.
+        """
         user_string_bytes = user_string.encode('utf-8')
         passwd_hash = PasswordHasher()
         hashed_user_string = passwd_hash.hash(user_string_bytes)
@@ -138,8 +131,12 @@ class UserDBManager:
     def verify_user(
             self,
             req: Dict[str, str]) \
-            -> Union[str, None]:
-        """Locate the DB file by UID and verify user credentials."""
+            -> Optional[str]:
+        """ Locate the DB file by UID and verify user credentials.
+
+        Returns:
+            Optional[str]: A success message or None if verification fails.
+        """
         passwd_hash = PasswordHasher()
         user_id = req.get('uid')
 
@@ -173,14 +170,18 @@ class UserDBManager:
 
     def display_user_db(self) \
             -> Dict[str | bytes, str]:
-        """Display the contents of the user-specific database."""
+        """Display the contents of the user-specific database
+
+        Returns:
+            Dict[str | bytes, str]:  A dictionary containing the database contents.
+        """
         view_database = {}
         with dbm.open(self.__file_path, 'r') as individual_store:
             for key in individual_store.keys():
                 try:
-                    view_database[key]=individual_store[key].decode('utf-8')
+                    view_database[key] = individual_store[key].decode('utf-8')
                 except UnicodeDecodeError:
-                    view_database[key]=individual_store[key].hex()
+                    view_database[key] = individual_store[key].hex()
 
         return view_database
 
