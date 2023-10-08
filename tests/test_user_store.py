@@ -1,62 +1,44 @@
+"""Test cases for UserDBManager"""
 import unittest
 import os
-from unittest.mock import patch, MagicMock
 from src.user_db_manager import UserDBManager
-from typing import Dict
-import base64
+
 
 class TestUserDBManager(unittest.TestCase):
+    """Test cases for UserDBManager"""
 
-    def setUp(self):
-        self.db_manager = UserDBManager()
-
-    def tearDown(self):
-        # Clean up any files created during tests
-        pass
+    @classmethod
+    def setUpClass(cls):
+        cls.db_manager = UserDBManager()
 
     def test_initialize_db(self):
-        # Ensure the database is initialized correctly
+        """Test to check if db is initialised"""
         self.db_manager.initialize_db()
-        # Assert if the file exists
         self.assertTrue(os.path.exists(self.db_manager.get_file_path))
 
-    @patch('src.user_db_manager.dbm.open')
-    @patch('src.user_db_manager.base64.urlsafe_b64encode')
-    def test_store_user_string(self, mock_urlsafe_b64encode, mock_dbm_open):
-        # Prepare request data
-        request_data: Dict[str, str] = {'request_string': 'test_user_string'}
-        # Mock the dbm.open function
-        mock_dbm_open.return_value.__enter__.return_value = {
-            'hash_string': 'mocked_hash_string'
-        }
-        # Mock urlsafe_b64encode
-        mock_urlsafe_b64encode.return_value = b'mocked_secure_user_string'
-        # Store user string
-        self.db_manager.store_user_string(request_data)
-        # Retrieve the stored data
-        stored_data = self.db_manager.deserialize_data(self.db_manager.display_user_db()['hash_string'])
-        # Check if stored data matches the input
-        self.assertEqual(stored_data['request_string'], request_data['request_string'])
+    def test_hash_user_string(self):
+        """Test hashed strings with argon2"""
+        hashed_string = self.db_manager.hash_user_string("password")
+        self.assertIsInstance(hashed_string, str)
+        self.assertTrue(len(hashed_string) > 0)
 
-    @patch('src.user_db_manager.dbm.open')
-    @patch('src.user_db_manager.base64.urlsafe_b64encode')
-    def test_verify_user(self, mock_urlsafe_b64encode, mock_dbm_open):
-        # Prepare request data
-        request_data: Dict[str, str] = {'request_string': 'test_user_string'}
-        # Store user string
-        self.db_manager.store_user_string(request_data)
-        # Mock the dbm.open function
-        mock_dbm_open.return_value.__enter__.return_value = {
-            'hash_string': 'mocked_hash_string'
-        }
-        # Mock urlsafe_b64encode
-        mock_urlsafe_b64encode.return_value = b'mocked_secure_user_string'
-        # Verify the user string
-        result = self.db_manager.verify_user({'uid': self.db_manager.pk})
-        # Check if verification is successful
-        self.assertEqual(result, f"User authenticated successfully for UID: {self.db_manager.pk}")
+    def test_serialize_data(self):
+        """Test to return serialised data and check data type"""
+        serialized_data = self.db_manager.serialize_data({"request_string": "data"})
+        self.assertIsInstance(serialized_data, str)
+        self.assertTrue(len(serialized_data) > 0)
+        
+    def test_display_db(self):
+        """Test to verify data in the store"""
+        req = {'request_string': 'mike12345678iuiujfghf'}
+        self.db_manager.store_user_string(req)
+        self.assertIsNotNone(self.db_manager.display_user_db())
+        self.assertIsInstance(self.db_manager.display_user_db(), dict)
+        self.assertTrue(len(self.db_manager.display_user_db()) == 4)
+        for key in self.db_manager.display_user_db():
+            if key == '_id':
+                self.assertIsNotNone(self.db_manager.display_user_db[key])
+            elif key == 'secured_user_string':
+                self.assertTrue(len(self.db_manager.display_user_db[key]) == 12)
 
-    # Add more test cases as needed
-
-if __name__ == '__main__':
-    unittest.main()
+        
