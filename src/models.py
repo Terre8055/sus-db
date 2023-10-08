@@ -1,10 +1,13 @@
 """Base Module to sync with individual stores (IRs)"""
 import datetime
 from typing import Optional
-from redis_om import EmbeddedJsonModel, JsonModel, Field, Migrator
+
 from pydantic import FilePath
-from user_store.user_db_manager import UserDBManager
+from redis_om import EmbeddedJsonModel, JsonModel, Field, Migrator
+
 from src import redis
+from src.user_db_manager import UserDBManager
+
 
 class Address(EmbeddedJsonModel):
     """Address Model"""

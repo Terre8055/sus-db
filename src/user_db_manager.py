@@ -1,19 +1,21 @@
 """Module to store hashed user strings in dbm"""
 
-import os
+import base64
+import datetime
 import dbm
 import json
+import os
 import uuid
-import datetime
-import base64
 from typing import (
     Dict,
     Union,
     Any
 )
+
 import argon2
-from dotenv import load_dotenv
 from argon2 import PasswordHasher
+from dotenv import load_dotenv
+
 from src.settings import get_path
 
 load_dotenv()
