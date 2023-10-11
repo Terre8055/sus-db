@@ -150,7 +150,7 @@ class UserDBManager:
             if hash_string is not None:
                 secure_user_string = base64.urlsafe_b64encode(
                     hash_string
-                ).decode('utf-8')[12:24]
+                ).decode('utf-8')
                 individual_store['secured_user_string'] = secure_user_string
                 individual_store['_id'] = self.__unique_identifier.encode(
                     'utf-8')
