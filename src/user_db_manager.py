@@ -73,7 +73,7 @@ class UserDBManager:
             return json.dumps(req['request_string'])
         raise KeyError("Error parsing key")
 
-    def fetch_user_data(self, uid: str, key: str) -> Optional[Union[str, bytes]]:
+    def _fetch_user_data(self, uid: str, key: str) -> Optional[Union[str, bytes]]:
         """Fetch specific user data from the database.
 
         Args:
@@ -106,7 +106,7 @@ class UserDBManager:
             Optional[Union[str, bytes]]: The deserialized data associated with the key
         """
         user_id = uid
-        user_data = self.fetch_user_data(user_id, key)
+        user_data = self._fetch_user_data(user_id, key)
         return user_data
 
     def hash_user_string(
