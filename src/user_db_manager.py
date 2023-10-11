@@ -73,7 +73,7 @@ class UserDBManager:
             return json.dumps(req['request_string'])
         raise KeyError("Error parsing key")
 
-    def fetch_user_data(self, uid: str, key: str) -> Optional[Union[str, bytes]]:
+    def _fetch_user_data(self, uid: str, key: str) -> Optional[Union[str, bytes]]:
         """Fetch specific user data from the database.
 
         Args:
@@ -106,7 +106,7 @@ class UserDBManager:
             Optional[Union[str, bytes]]: The deserialized data associated with the key
         """
         user_id = uid
-        user_data = self.fetch_user_data(user_id, key)
+        user_data = self._fetch_user_data(user_id, key)
         return user_data
 
     def hash_user_string(
@@ -126,12 +126,13 @@ class UserDBManager:
     def store_user_string(
             self,
             req: Dict[str, str]) \
-            -> None:
+            -> Dict[str, str]:
         """Store user string after encryption and generate
         secure user string using base64 encoding
         """
         serialised_data = self.serialize_data(req)
         user_hash = self.hash_user_string(serialised_data)
+        uid: dict = {}
 
         with dbm.open(self.__file_path, 'w') as individual_store:
             individual_store['hash_string'] = user_hash.encode('utf-8)')
@@ -145,6 +146,7 @@ class UserDBManager:
                 formatted_datetime, "%Y-%m-%dT%H:%M:%S.%f"
             )
 
+
             if hash_string is not None:
                 secure_user_string = base64.urlsafe_b64encode(
                     hash_string
@@ -154,6 +156,16 @@ class UserDBManager:
                     'utf-8')
                 individual_store['created_on'] = str(
                     current_date).encode('utf-8')
+
+            user_id = individual_store.get('_id')
+            
+            if user_id:
+                uid.update(id = user_id.decode('utf-8'))
+                print("UserID successfully assigned...")
+            else:
+                raise TypeError("User ID is None. Unable to assign to 'uid'.")
+
+        return uid
 
     def verify_user(
             self,

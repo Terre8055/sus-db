@@ -28,6 +28,14 @@ class TestUserDBManager(unittest.TestCase):
         self.assertIsInstance(serialized_data, str)
         self.assertTrue(len(serialized_data) > 0)
         
+
+    def test_storage_return(self):
+        """Test toreturn case of store method"""
+        req = {'request_string': 'mike12345678iuiujfkk'}
+        x = self.db_manager.store_user_string(req)
+        self.assertIsInstance(x, dict)
+        self.assertIsNotNone(x.get('id'))
+        
     def test_display_db(self):
         """Test to verify data in the store"""
         req = {'request_string': 'mike12345678iuiujfghf'}
