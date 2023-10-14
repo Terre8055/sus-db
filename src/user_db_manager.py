@@ -201,7 +201,7 @@ class UserDBManager:
                     return "User string does not match the stored hash."
 
                 if check_validity:
-                    return f"User authenticated successfully for UID: {user_id}"
+                    return "Success"
 
                 return None
         else:
