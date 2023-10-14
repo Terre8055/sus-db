@@ -4,6 +4,7 @@ import base64
 import datetime
 import dbm
 import json
+import logging
 import os
 import uuid
 from typing import (
@@ -11,14 +12,37 @@ from typing import (
     Union,
     Optional
 )
-
+from logging.handlers import RotatingFileHandler
 import argon2
 from argon2 import PasswordHasher
 from dotenv import load_dotenv
 
-from src.settings import get_path
+from src.settings import get_path, get_log_path
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+log_path = get_log_path 
+if log_path is not None:
+    handler = RotatingFileHandler(
+        log_path,
+        maxBytes=10240,
+        backupCount=5
+    )
+else:
+    raise TypeError('Bad expression given')
+handler.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter(
+    '%(asctime)s - %(message)s',
+    '%m/%d/%Y %I:%M:%S %p'
+)
+handler.setFormatter(formatter)
+
+
+logger.addHandler(handler)
 
 
 class UserDBManager:
@@ -36,6 +60,7 @@ class UserDBManager:
         self.__file_name = f"user_db_{self.__unique_identifier}"
         self.__file_path = os.path.join(self.__get_path, self.__file_name)
         self.initialize_db()
+        logger.info("UserDBManager instance created.")
 
     def initialize_db(self) -> None:
         """Initialize the user-specific database if it doesn't exist.
@@ -48,6 +73,7 @@ class UserDBManager:
             pass
 
         self.__initialize_user_db()
+        logger.info("UserDBManager instance created.")
 
     def __initialize_user_db(self) -> None:
         """Initialize the keys in the user-specific database"""
@@ -86,15 +112,14 @@ class UserDBManager:
         file_path = os.path.join(self.__get_path, file_name)
         if os.path.exists(file_path):
             with dbm.open(file_path, 'r') as individual_store:
-                try:
-                    user_data_bytes = individual_store.get(key.encode('utf-8'))
-                    if user_data_bytes is not None:
-                        return user_data_bytes.decode('utf-8')
-                    return "error"
-                except KeyError:
-                    print('Associated key not found')
-                    return None
-        return None
+                user_data_bytes = individual_store.get(key.encode('utf-8'))
+                if user_data_bytes is not None:
+                    logger.info(f"[FETCH] Data fetched from file: {file_name} ")
+                    return user_data_bytes.decode('utf-8')
+                logger.warning(f'[FETCH] Associated key not found in file: {file_name}')
+                return f"Associated key not found"
+        logger.error("[FETCH] System Error while key lookup")
+        return f'System Error while fetching'
 
     def deserialize_data(self, uid: str, key: str) -> Optional[Union[str, bytes]]:
         """Fetch and deserialize user data from the database using a specific key.
@@ -161,8 +186,9 @@ class UserDBManager:
             
             if user_id:
                 uid.update(id = user_id.decode('utf-8'))
-                print("UserID successfully assigned...")
+                logger.info("[STORAGE] UserID successfully assigned...")
             else:
+                logger.error("[STORAGE] User ID is None. Unable to assign to uid")
                 raise TypeError("User ID is None. Unable to assign to 'uid'.")
 
         return uid
@@ -198,13 +224,17 @@ class UserDBManager:
                 try:
                     check_validity = passwd_hash.verify(user_hash, user_string)
                 except argon2.exceptions.VerifyMismatchError:
+                    logger.error(f"[VERIF] User string does not match the stored hash for UID: {user_id}.")
                     return "User string does not match the stored hash."
 
                 if check_validity:
+                    logger.info(f"[VERIF] User verification successful for UID: {user_id}.")
                     return "Success"
-
+                
+                logger.warning(f"[VERIF] User verification failed for UID: {user_id}.")
                 return None
         else:
+            logger.error(f"[VERIF] No database found for UID: {user_id}")
             return f"No database found for UID: {user_id}"
 
     def display_user_db(self) \
