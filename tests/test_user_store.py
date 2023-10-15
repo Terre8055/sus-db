@@ -40,7 +40,7 @@ class TestUserDBManager(unittest.TestCase):
 
 
     def test_verify_user(self):
-        """Test toreturn case of store method"""
+        """Test to return case of store method"""
         req = {
             'uid': '86dd526f-a86f-44f2-aa28-b1dc6f99ee30',
             'request_string': 'mike12345678iuiujfkk'
@@ -62,4 +62,13 @@ class TestUserDBManager(unittest.TestCase):
             elif key == 'secured_user_string':
                 self.assertTrue(len(self.db_manager.display_user_db[key]) == 12)
 
-        
+
+    def test_check_sus_integrity(self):
+        """Test to check sus integrity"""
+        req = {
+            'uid': '9a7c6ddf-e398-4b96-af4d-a195f27c5ba0',
+            'secured_user_string': 'mikye12345678iuiujfkk'
+        }
+        uid = req.get('uid')
+        x = self.db_manager(uid).check_sus_integrity(req)
+        self.assertTrue(x == 'Error, Integrity check failed')
