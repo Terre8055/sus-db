@@ -32,7 +32,7 @@ if log_path is not None:
         backupCount=5
     )
 else:
-    raise TypeError('Bad expression given')
+    raise TypeError('Bad log path expression given')
 handler.setLevel(logging.DEBUG)
 
 formatter = logging.Formatter(
@@ -51,29 +51,55 @@ class UserDBManager:
     This class manages user-specific databases, allowing for the storage and retrieval
     of hashed and secured user strings.
     """
+    
+    def db_file_exists(self) -> bool:
+        """Check if a DBM file already exists with the given file path and name."""
+        return os.path.exists(self.get_file_path)
 
-    def __init__(self) -> None:
+    def __init__(self, uid: Optional[str] = None) -> None:
         """Initialize the user storage instance
         with a unique identifier attached to file name."""
         self.__get_path = os.path.expanduser(get_path) if get_path else ''
-        self.__unique_identifier = str(uuid.uuid4())
+        self.__unique_identifier = uid if uid else str(uuid.uuid4()) #Except for storing strings, always pass in the uid
         self.__file_name = f"user_db_{self.__unique_identifier}"
         self.__file_path = os.path.join(self.__get_path, self.__file_name)
-        self.initialize_db()
-        logger.info("UserDBManager instance created.")
+        
+        if self.db_file_exists():
+            logger.info(f"[INIT] UserDBManager instance already exists for {self.get_file_name}, skipping initialisation.")
+            return
+        else:
+            self.initialize_db()
+            logger.info(f"[INIT] UserDBManager instance initialized for {self.get_file_name}.")
 
+    @property
+    def get_file_path(self) -> Union[str, os.PathLike]:
+        """Retrieve store path"""
+        return self.__file_path
+
+    @property
+    def get_file_name(self) -> str:
+        """Retrieve store file name"""
+        return self.__file_name
+
+    @property
+    def pk(self) -> str:
+        """Retrieve store id"""
+        return self.__unique_identifier
+    
     def initialize_db(self) -> None:
         """Initialize the user-specific database if it doesn't exist.
         Ensure the directory exists or create it
         Creates an empty file named 'user_db<uid>' inside the directory
         """
+            
         os.makedirs(self.__get_path, exist_ok=True)
+        
 
         with open(self.__file_path, 'w', encoding="utf-8"):
             pass
 
         self.__initialize_user_db()
-        logger.info("UserDBManager instance created.")
+        logger.info("UserDBManager instance initialised.")
 
     def __initialize_user_db(self) -> None:
         """Initialize the keys in the user-specific database"""
@@ -254,17 +280,41 @@ class UserDBManager:
 
         return view_database
 
-    @property
-    def get_file_path(self) -> Union[str, os.PathLike]:
-        """Retrieve store path"""
-        return self.__file_path
+    
+    def check_sus_integrity(self, req: Dict[str, str]) -> str:
+        """Check secured user strings integrity before restoring dbm
 
-    @property
-    def get_file_name(self) -> str:
-        """Retrieve store file name"""
-        return self.__file_name
+        Args:
+            req (Dict[str, str]): Request data passed as a dict
 
-    @property
-    def pk(self) -> str:
-        """Retrieve store id"""
-        return self.__unique_identifier
+        Raises:
+            TypeError: If values in dict is None
+
+        Returns:
+            str: `Success` if integrity check passes
+        """
+        get_user_id, get_secured_user_string \
+            = req.get('uid'), req.get('secured_user_string')
+        if get_secured_user_string is None and get_user_id is None:
+            raise TypeError("Invalid key passed")
+        file_name = f"user_db_{get_user_id}"
+        file_path = os.path.join(self.__get_path, file_name)
+        if os.path.exists(file_path):
+            logger.info(f'[RESTORE] File for user: {get_user_id} exists.')
+            with dbm.open(file_path, 'r') as individual_store:
+                try:
+                    find_secure_user_string = individual_store.get(
+                        "secured_user_string")
+                    if find_secure_user_string is not None:
+                        check_string_integrity = \
+                            find_secure_user_string.decode('utf-8') \
+                            == get_secured_user_string
+                        if check_string_integrity:
+                            logger.info(f"[RESTORE] Integrity check passed for user:{get_user_id}")
+                            return "Success"
+                        logger.warning(f"[RESTORE] Integrity check failed for user:{get_user_id}")
+                        return "Error, Integrity check failed"
+                except KeyError:
+                    return "User string not found in the database."
+        logger.error(f"[RESTORE] DBM not found for user: {get_user_id}")
+        return f"DBM not found"
