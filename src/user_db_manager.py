@@ -299,7 +299,7 @@ class UserDBManager:
         """
         get_user_id, get_secured_user_string \
             = req.get('uid'), req.get('secured_user_string')
-        if get_secured_user_string is None and get_user_id is None:
+        if not get_user_id and not get_secured_user_string :
             raise TypeError("Invalid key passed")
         file_name = f"user_db_{get_user_id}"
         file_path = os.path.join(self.__get_path, file_name)
@@ -322,3 +322,49 @@ class UserDBManager:
                     return "User string not found in the database."
         logger.error(f"[RESTORE] DBM not found for user: {get_user_id}")
         return f"DBM not found"
+    
+    
+    def recover_account(self, req: Dict[str, str]) -> Union[Dict[str, str], str]:
+        """Method to recover account with id and user string
+
+        Args:
+            req (Dict[str, str]): Request data passed as a dict
+        """
+        response_data: Dict[str, str] = {}
+        
+        get_uid = req.get('_id')
+        if not get_uid:
+            raise ValueError('No value received for id')
+
+        user_string = req.get('user_string')
+        if not user_string:
+            raise ValueError('No value for user_string')
+
+        serialised_string = self.serialize_data({'request_string': user_string})
+
+        file_name = f"user_db_{get_uid}"
+        file_path = os.path.join(self.__get_path, file_name)
+        
+        if os.path.exists(file_path):
+            logger.info(f'[RECOVER] File for user: {get_uid} exists.')
+            with dbm.open(file_path, 'w') as individual_store:
+                logger.info(f'[RECOVER] Initiating File recovery for user: {get_uid}')
+                try:
+                    hashed_string = self.hash_user_string(serialised_string)
+                    if hashed_string:
+                        individual_store['hash_string'] = hashed_string.encode('utf-8')
+                        logger.info(f"[RECOVER] String hashed successfully for file: {get_uid}")
+                    hash_string_bytes = individual_store.get('hash_string')
+                    if hash_string_bytes is not None:
+                        secure_user_string = base64.urlsafe_b64encode(
+                            hash_string_bytes
+                        ).decode('utf-8')
+                        individual_store['secured_user_string'] = secure_user_string
+                        response_data.update(_id=get_uid, sus=secure_user_string)
+                        logger.info(f"[RECOVER] Recovery completed, sus assigned")
+                        return response_data
+                except Exception as e:
+                    logger.error(f"[RECOVER] {e}", exc_info=True)
+
+        logger.error(f"[RECOVER] DBM not found for user: {get_uid}")
+        return "DBM not found"                           
