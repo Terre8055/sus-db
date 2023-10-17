@@ -177,10 +177,14 @@ class UserDBManager:
     def store_user_string(
             self,
             req: Dict[str, str]) \
-            -> Dict[str, str]:
+            -> Dict[str, str] | None:
         """Store user string after encryption and generate
         secure user string using base64 encoding
         """
+        for key in req.keys():
+            if not req.get(key):
+                logger.error(f"[STORAGE] Empty request received")
+                return None
         serialised_data = self.serialize_data(req)
         user_hash = self.hash_user_string(serialised_data)
         uid: dict = {}
