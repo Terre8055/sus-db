@@ -1,31 +1,55 @@
-# sus-db: Secure User String Database
+# SusDB
 
-SUS-DB is a microservice dedicated to managing Secure User Strings (SUS) within our social app infrastructure. The service utilizes native Python dbm storage to securely store and handle user-specific data, focusing on privacy and efficient data access. SUS-DB interfaces with our central Redis station for synchronized updates and enables a seamless and secure experience for our users.
+SusDB is a secure user string database system designed to manage and protect sensitive user data. This wiki serves as a guide to understanding SusDB's architecture, features, data security, and the post office metaphor that helps illustrate its functions.
 
-**Key Features**:
+## Table of Contents
 
-- Efficient and secure storage of Secure User Strings (SUS) for user identification.
-- Integration with central Redis station for synchronization and real-time updates.
-- Native Python dbm storage for optimized data management.
-- Privacy-centric design, ensuring minimal sensitive data persistence.
+- [Introduction](#introduction)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Data Security](#data-security)
+- [Account Recovery](#account-recovery)
+- [The Classical Post Office Story](#the-classical-post-office-story)
 
-## Data Persistency Design and Architecture
+## Introduction
 
-Data architecture where we have a single store or repository, that we call a central station using redis which synchronises with individual stores, which we call IRs. Now every client or user when signs up is allocated a store or repo which uses the native python dbm. And when the individual dbm by python is updated, it puts a snapshot to the central store, which in turns syncs and updates the remaining IRs.
+SusDB is a secure and efficient database system built to manage sensitive user data. It focuses on securing user strings and enables data recovery when needed. It operates using a post office metaphor, where each user has a secured "box" to store their sensitive data.
 
-Since we hate an SPOF, we also have CS slaves which also go in sync with the CS. 
+For a detailed overview of SusDB, visit the [Introduction](./Introduction.md) page.
 
-**Model Schema for User**
+## Features
 
-- user_string: `Secure User String eg. <g26454xd87q5>` //to be hashed and transformed into a `user_name` after serialization for ux.
-- user_name: `default=None`
-  
-**Example Flow:**
+SusDB boasts a set of essential features that ensure data privacy and security. These features include hashing user strings, integrity checks, data serialization, and account recovery management. Understanding these features is crucial for utilizing SusDB effectively.
 
-1. User signs up and provides a Secure User String (e.g., "g26454xd87q5").
-2. The provided user_string is hashed and transformed to create a user_name (e.g., "user123").
-3. The user_name ("user123") is associated with the user's account, providing a username for the user.
-4. The original Secure User String is securely hashed and stored in the user's data store for authentication and identification purposes.
+Explore the full list of features on the [Features](./Features.md) page.
+
+## Architecture
+
+The architecture of SusDB revolves around securely storing user data and ensuring its integrity. The system uses a unique file-based approach for database management and a central repository (Redis) for critical resources. Learn how SusDB operates to protect user data.
+
+Check out the [Architecture](./Architecture.md) page for a comprehensive understanding.
+
+## Data Security
+
+Data security is a top priority for SusDB. It relies on the Argon2 hashing algorithm to safeguard user strings, ensuring that sensitive information remains confidential. Frequent maintenance and backup procedures are in place to protect against data loss and corruption.
+
+Visit the [Data Security](./Data-Security.md) page for a deep dive into how SusDB prioritizes your data's safety.
+
+## Account Recovery
+
+SusDB includes an account recovery system to assist users in regaining access to their data if they forget their user strings. This process involves verifying user identity and integrity checks to protect sensitive information.
+
+Learn more about the account recovery process in the [Account Recovery](./Account-Recovery.md) section.
+
+## The Classical Post Office Story
+
+To help understand SusDB's operations, we've drawn a metaphor with a classical post office. Just like a post office assigns secure boxes and manages keys, SusDB uses file IDs to protect user data. Redis serves as a central repository, but it doesn't store data directly. This metaphor highlights SusDB's unique approach to data management.
+
+Read the [Classical Post Office Story](./The-Classical-Post-Office-Story.md) for a creative perspective on SusDB's functions.
+
+## Conclusion
+
+SusDB is designed to secure and manage sensitive user data efficiently. Its unique architecture and security features make it an ideal choice for applications that require privacy and data protection. Explore the wiki to learn how to utilize SusDB effectively and ensure the security of your user data.
 
 ![sus_db_design](images/diagram_sus.png)
 
