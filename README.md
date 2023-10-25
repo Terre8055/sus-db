@@ -29,5 +29,5 @@ Since we hate an SPOF, we also have CS slaves which also go in sync with the CS.
 
 ![sus_db_design](images/diagram_sus.png)
 
-Find docs here [IR SUS-DB Documentation](https://ir-susdb.netlify.app/)
+Find docs here [SUS-DB Documentation](https://github.com/Terre8055/sus-db/wiki)
 
