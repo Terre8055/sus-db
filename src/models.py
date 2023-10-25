@@ -54,7 +54,6 @@ class Account(JsonModel):
     priority: Optional[str]
     annual_revenue: Optional[str]
     phone: Optional[str]
-    address: Address
     category: str
     is_owner: bool = Field(default=False)
     website: Optional[str]
@@ -112,30 +111,42 @@ class Billing(EmbeddedJsonModel):
         return billing_address
 
 
-class User(JsonModel, UserDBManager):
+class User(JsonModel):
     """User Model"""
-    first_name: str = Field(index=True, full_text_search=True)
-    last_name: str
-    username: str = Field(default='admin000')
-    title: str
+    first_name: Optional[str] = Field(index=True)
+    last_name: Optional[str]
+    username: Optional[str] = Field(default='admin000')
+    title: Optional[str]
     is_authenticated: bool = Field(default=False)
-    is_authorized: bool = Field(default=False)
-    profile_pic: FilePath
-    email: str
-    is_admin: bool = Field(default=True)
-    phone: str = Field(default="+1(000)0000-000")
-    website: str
-    bio: str
-    date_joined: datetime.date = Field(default=datetime.datetime.now())
-    address: Address
-    billing: Billing
+    email: Optional[str]
+    phone: Optional[str] = Field(default="+1(000)0000-000")
+    website: Optional[str]
+    bio: Optional[str]
+    session_id : Optional[str] = Field(index=True)
+    ir_id : Optional[str] = Field(index=True)
+    date_joined: str = Field(default=datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT'))
+
 
     class Meta:
         """Define additional configuration"""
         database = redis
+        global_key_prefix = "sus-db"
+        model_key_prefix = "user"
+        
 
     def __str__(self) -> str:
-        return f"{self.first_name} {self.last_name}"
+        return f"{self.ir_id}"
+    
 
 
-Migrator().run()
+
+class Session(JsonModel):
+    session_id: Optional[str]
+    is_authenticated: bool = Field(default=False)
+    
+    
+    class Meta:
+        """Define additional configuration"""
+        database = redis
+        global_key_prefix = "sus-db"
+        model_key_prefix = "session"
