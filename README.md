@@ -4,12 +4,12 @@ SusDB is a secure user string database system designed to manage and protect sen
 
 ## Table of Contents
 
-- [Introduction](https://github.com/Terre8055/sus-db/wiki)
-- [Features](https://github.com/Terre8055/sus-db/wiki/sus%E2%80%90db:-Secured-User-Strings-Database)
-- [Architecture](https://github.com/Terre8055/sus-db/wiki/Data-Persistency-Architecture)
-- [Data Security](https://github.com/Terre8055/sus-db/wiki/Data-Security-and-Account-Recovery)
-- [Account Recovery](https://github.com/Terre8055/sus-db/wiki/Data-Security-and-Account-Recovery)
-- [The Classical Post Office Story](https://github.com/Terre8055/sus-db/wiki/The-Classical-Post-Office-Story:-A-Metaphor-for-SusDB)
+- [Introduction](#introduction)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Data Security](#data-security)
+- [Account Recovery](#account-recovery)
+- [The Classical Post Office Story](#the-classical-post-office-story)
 
 ## Introduction
 
