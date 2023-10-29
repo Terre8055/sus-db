@@ -93,7 +93,6 @@ class UserDBManager:
         """
             
         os.makedirs(self.__get_path, exist_ok=True)
-        
 
         with open(self.__file_path, 'w', encoding="utf-8"):
             pass
@@ -151,6 +150,7 @@ class UserDBManager:
         """Fetch and deserialize user data from the database using a specific key.
 
         Args:
+            uid: user id
             key (str): The key to fetch and deserialize data.
 
         Returns:
@@ -200,7 +200,6 @@ class UserDBManager:
             current_date = datetime.datetime.strptime(
                 formatted_datetime, "%Y-%m-%dT%H:%M:%S.%f"
             )
-
 
             if hash_string is not None:
                 secure_user_string = base64.urlsafe_b64encode(
@@ -284,7 +283,6 @@ class UserDBManager:
 
         return view_database
 
-    
     def check_sus_integrity(self, req: Dict[str, str]) -> str:
         """Check secured user strings integrity before restoring dbm
 
@@ -322,8 +320,7 @@ class UserDBManager:
                     return "User string not found in the database."
         logger.error(f"[RESTORE] DBM not found for user: {get_user_id}")
         return f"DBM not found"
-    
-    
+
     def recover_account(self, req: Dict[str, str]) -> Union[Dict[str, str], str]:
         """Method to recover account with id and user string
 
