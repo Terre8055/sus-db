@@ -5,8 +5,8 @@ from typing import Optional
 from pydantic import FilePath
 from redis_om import EmbeddedJsonModel, JsonModel, Field, Migrator
 
-from src.settings import redis
-from src.user_db_manager import UserDBManager
+from settings import redis
+from user_db_manager import UserDBManager
 
 
 class User(JsonModel):

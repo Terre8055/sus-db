@@ -17,7 +17,7 @@ import argon2
 from argon2 import PasswordHasher
 from dotenv import load_dotenv
 
-from src.settings import get_path, get_log_path
+from settings import get_log_path, get_path
 
 load_dotenv()
 
