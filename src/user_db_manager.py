@@ -17,7 +17,7 @@ import argon2
 from argon2 import PasswordHasher
 from dotenv import load_dotenv
 
-from src.settings import get_path, get_log_path
+from settings import get_log_path, get_path
 
 load_dotenv()
 
@@ -93,7 +93,6 @@ class UserDBManager:
         """
             
         os.makedirs(self.__get_path, exist_ok=True)
-        
 
         with open(self.__file_path, 'w', encoding="utf-8"):
             pass
@@ -151,6 +150,7 @@ class UserDBManager:
         """Fetch and deserialize user data from the database using a specific key.
 
         Args:
+            uid: user id
             key (str): The key to fetch and deserialize data.
 
         Returns:
@@ -200,7 +200,6 @@ class UserDBManager:
             current_date = datetime.datetime.strptime(
                 formatted_datetime, "%Y-%m-%dT%H:%M:%S.%f"
             )
-
 
             if hash_string is not None:
                 secure_user_string = base64.urlsafe_b64encode(
@@ -267,7 +266,7 @@ class UserDBManager:
             logger.error(f"[VERIF] No database found for UID: {user_id}")
             return f"No database found for UID: {user_id}"
 
-    def display_user_db(self) \
+    def display_user_db(self, user_id) \
             -> Dict[str | bytes, str]:
         """Display the contents of the user-specific database
 
@@ -275,7 +274,10 @@ class UserDBManager:
             Dict[str | bytes, str]:  A dictionary containing the database contents.
         """
         view_database = {}
-        with dbm.open(self.__file_path, 'r') as individual_store:
+        file_name = f"user_db_{user_id}"
+        file_path = os.path.join(self.__get_path, file_name)
+        
+        with dbm.open(file_path, 'r') as individual_store:
             for key in individual_store.keys():
                 try:
                     view_database[key] = individual_store[key].decode('utf-8')
@@ -284,7 +286,6 @@ class UserDBManager:
 
         return view_database
 
-    
     def check_sus_integrity(self, req: Dict[str, str]) -> str:
         """Check secured user strings integrity before restoring dbm
 
@@ -322,8 +323,7 @@ class UserDBManager:
                     return "User string not found in the database."
         logger.error(f"[RESTORE] DBM not found for user: {get_user_id}")
         return f"DBM not found"
-    
-    
+
     def recover_account(self, req: Dict[str, str]) -> Union[Dict[str, str], str]:
         """Method to recover account with id and user string
 
