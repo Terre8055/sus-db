@@ -266,7 +266,7 @@ class UserDBManager:
             logger.error(f"[VERIF] No database found for UID: {user_id}")
             return f"No database found for UID: {user_id}"
 
-    def display_user_db(self) \
+    def display_user_db(self, user_id) \
             -> Dict[str | bytes, str]:
         """Display the contents of the user-specific database
 
@@ -274,7 +274,10 @@ class UserDBManager:
             Dict[str | bytes, str]:  A dictionary containing the database contents.
         """
         view_database = {}
-        with dbm.open(self.__file_path, 'r') as individual_store:
+        file_name = f"user_db_{user_id}"
+        file_path = os.path.join(self.__get_path, file_name)
+        
+        with dbm.open(file_path, 'r') as individual_store:
             for key in individual_store.keys():
                 try:
                     view_database[key] = individual_store[key].decode('utf-8')
