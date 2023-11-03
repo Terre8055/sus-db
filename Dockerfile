@@ -11,7 +11,9 @@ COPY . /app
 COPY requirements.txt /app
 
 # Create a directory for logs and DBM files
-RUN mkdir -p /app/data
+RUN mkdir -p /home/data/sus-db/
+
+RUN touch /home/data/sus-db/susdb.log
 
 # Install any dependencies
 RUN pip install -r requirements.txt
