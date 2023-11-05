@@ -277,14 +277,18 @@ class UserDBManager:
         file_name = f"user_db_{user_id}"
         file_path = os.path.join(self.__get_path, file_name)
         
-        with dbm.open(file_path, 'r') as individual_store:
-            for key in individual_store.keys():
-                try:
-                    view_database[key] = individual_store[key].decode('utf-8')
-                except UnicodeDecodeError:
-                    view_database[key] = individual_store[key].hex()
+        if os.path.exists(file_path):
+            with dbm.open(file_path, 'r') as individual_store:
+                for key in individual_store.keys():
+                    try:
+                        view_database[key] = individual_store[key].decode('utf-8')
+                    except UnicodeDecodeError:
+                        view_database[key] = individual_store[key].hex()
 
-        return view_database
+                    return view_database
+        else:
+            logger.error(f"[DISPLAY] No database founf for UID: {user_id}")
+            return f"No database found for UID: {user_id}"
 
     def check_sus_integrity(self, req: Dict[str, str]) -> str:
         """Check secured user strings integrity before restoring dbm
@@ -367,4 +371,36 @@ class UserDBManager:
                     logger.error(f"[RECOVER] {e}", exc_info=True)
 
         logger.error(f"[RECOVER] DBM not found for user: {get_uid}")
-        return "DBM not found"                           
+        return "DBM not found"
+    
+    
+    def close_account(self, req: Dict(str, str)) -> str:
+        user_id = req.get('uid')
+        secured_user_string = req.get('sus')
+        if not user_id or not secured_user_string:
+            raise KeyError('Error parsing user input')
+        
+        file_name = f"user_db_{user_id}"
+        file_path = os.path.join(self.__get_path, file_name)
+        
+        if os.path.exists(file_path):
+            try:
+                with dbm.open(file_path, 'r') as individual_store:
+                    db_secured = individual_store.get('secured_user_string').decode('utf-8')
+                    if db_secured is None:
+                        logger.error(f"[DISPLAY] Provided Secured User String does not exist for UID: {user_id}")
+                        return 'User not found'
+                    check_integrity = db_secured == secured_user_string
+                    if not check_integrity:
+                        logger.error(f"[DISPLAY] Provided Secured User String does not match for UID: {user_id}")
+                    os.remove(file_path)
+                    if os.path.exists(file_path):
+                        logger.warning(f"[DISPLAY] DBM file not deleted")
+                        return 
+                    logger.info[f"[DISPLAY] Account deleted successfully for UID: {user_id}"]
+            except Exception as e:
+                logger.error(f"[RECOVER] {e}", exc_info=True)
+                return 'Error deleting account'
+            
+        logger.error(f"[RECOVER] DBM not found for user: {user_id}")
+        return 'DBM not found'    
