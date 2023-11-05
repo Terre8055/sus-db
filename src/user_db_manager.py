@@ -375,16 +375,16 @@ class UserDBManager:
     
     
     def close_account(self, req: Dict[str, str]) -> str:
-        """_summary_
+        """Method to support permanent account deletion
 
         Args:
-            req (Dict): _description_
+            req (Dict): request param (uid, secured user string)
 
         Raises:
-            KeyError: _description_
+            KeyError: KeyError when empty queries are passed in
 
         Returns:
-            str: _description_
+            str: Success if successful 
         """
         user_id = req.get('uid')
         secured_user_string = req.get('sus')
@@ -399,11 +399,11 @@ class UserDBManager:
                 with dbm.open(file_path, 'r') as individual_store:
                     db_secured = individual_store.get('secured_user_string')
                     if db_secured is None:
-                        logger.error(f"[CLOSE ACCOUNT] Provided Secured User String does not exist for UID: {user_id}")
+                        logger.error(f"[CLOSE ACCOUNT]  Account does not exist for UID: {user_id}")
                         return 'User not found'
                     check_integrity = db_secured.decode('utf-8') == secured_user_string
                     if not check_integrity:
-                        logger.error(f"[CLOSE ACCOUNT] Provided Secured User String does not match for UID: {user_id}")
+                        return 'Provided Secured User String does not match for UID'
                     os.remove(file_path)
                     if os.path.exists(file_path):
                         logger.warning(f"[CLOSE ACCOUNT] DBM file not deleted")
