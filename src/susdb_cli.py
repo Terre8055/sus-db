@@ -41,6 +41,10 @@ deserialize_parser = subparsers.add_parser("retrieve", help="Retrieve user data 
 deserialize_parser.add_argument("--uid", required=True, help="Unique user id to locate db")
 deserialize_parser.add_argument("--key", required=True, help="Data to deserialize from db")
 
+account_removal = subparsers.add_parser("close", help="Close user account from store")
+account_removal.add_argument("--uid", required=True, help="Unique user id to locate db")
+account_removal.add_argument("--sus", required=True, help="Secure User String to verify integrity")
+
 
 ###########################################################
 ###############         METHODS     #######################
@@ -96,6 +100,19 @@ def display_user_db_command(args):
     user_db_view = UserDBManager(user_id).display_user_db(user_id)
     print(user_db_view)
     
+    
+def remove_user_account(args):
+    """Remove User db
+
+    Args:
+        args (_type_): Positional Arguments/subcommands - uid / sus
+    """
+    user_id = args.uid
+    secured_user_string = args.sus
+    req = {'uid': user_id, 'sus': secured_user_string}
+    response = UserDBManager(user_id).close_account(req)
+    print(response)
+    
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -108,3 +125,5 @@ if __name__ == "__main__":
             deserialize_data_command(args)
         case "verify":
             verify_user_command(args)
+        case "close":
+            remove_user_account(args)

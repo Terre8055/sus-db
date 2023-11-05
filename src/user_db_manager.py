@@ -266,8 +266,8 @@ class UserDBManager:
             logger.error(f"[VERIF] No database found for UID: {user_id}")
             return f"No database found for UID: {user_id}"
 
-    def display_user_db(self, user_id) \
-            -> Dict[str | bytes, str]:
+    def display_user_db(self, user_id: str) \
+            -> str | Dict[str | bytes, str]:
         """Display the contents of the user-specific database
 
         Returns:
@@ -286,9 +286,9 @@ class UserDBManager:
                         view_database[key] = individual_store[key].hex()
 
                     return view_database
-        else:
-            logger.error(f"[DISPLAY] No database founD for UID: {user_id}")
-            return f"No database found for UID: {user_id}"
+                
+        logger.error(f"[DISPLAY] No database founD for UID: {user_id}")
+        return f"No database found for UID: {user_id}"
 
     def check_sus_integrity(self, req: Dict[str, str]) -> str:
         """Check secured user strings integrity before restoring dbm
@@ -374,7 +374,18 @@ class UserDBManager:
         return "DBM not found"
     
     
-    def close_account(self, req: Dict(str, str)) -> str:
+    def close_account(self, req: Dict[str, str]) -> str:
+        """_summary_
+
+        Args:
+            req (Dict): _description_
+
+        Raises:
+            KeyError: _description_
+
+        Returns:
+            str: _description_
+        """
         user_id = req.get('uid')
         secured_user_string = req.get('sus')
         if not user_id or not secured_user_string:
@@ -386,21 +397,22 @@ class UserDBManager:
         if os.path.exists(file_path):
             try:
                 with dbm.open(file_path, 'r') as individual_store:
-                    db_secured = individual_store.get('secured_user_string').decode('utf-8')
+                    db_secured = individual_store.get('secured_user_string')
                     if db_secured is None:
                         logger.error(f"[CLOSE ACCOUNT] Provided Secured User String does not exist for UID: {user_id}")
                         return 'User not found'
-                    check_integrity = db_secured == secured_user_string
+                    check_integrity = db_secured.decode('utf-8') == secured_user_string
                     if not check_integrity:
                         logger.error(f"[CLOSE ACCOUNT] Provided Secured User String does not match for UID: {user_id}")
                     os.remove(file_path)
                     if os.path.exists(file_path):
                         logger.warning(f"[CLOSE ACCOUNT] DBM file not deleted")
-                        return 
-                    logger.info[f"[CLOSE ACCOUNT] Account deleted successfully for UID: {user_id}"]
+                        return 'Error' 
+                    logger.info(f"[CLOSE ACCOUNT] Account deleted successfully for UID: {user_id}")
+                    return 'Success'
             except Exception as e:
                 logger.error(f"[CLOSE ACCOUNT] {e}", exc_info=True)
                 return 'Error deleting account'
-            
+     
         logger.error(f"[CLOSE ACCOUNT] DBM not found for user: {user_id}")
         return 'DBM not found'    
