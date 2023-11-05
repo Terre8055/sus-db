@@ -11,9 +11,8 @@ COPY . /app
 COPY requirements.txt /app
 
 # Create a directory for logs and DBM files
-RUN mkdir -p /home/data/sus-db/
-
-RUN touch /home/data/sus-db/susdb.log
+RUN mkdir -p /tmp/data/sus-db
+RUN touch /tmp/data/sus-db/susdb.log
 
 # Install any dependencies
 RUN pip install -r requirements.txt
@@ -23,4 +22,6 @@ ENV PYTHONPATH=/app/src
 
 # Define the entry command
 CMD ["python", "src/susdb_cli.py"]
+
+CMD tail -f /dev/null
 
