@@ -287,7 +287,7 @@ class UserDBManager:
 
                     return view_database
         else:
-            logger.error(f"[DISPLAY] No database founf for UID: {user_id}")
+            logger.error(f"[DISPLAY] No database founD for UID: {user_id}")
             return f"No database found for UID: {user_id}"
 
     def check_sus_integrity(self, req: Dict[str, str]) -> str:
@@ -388,19 +388,19 @@ class UserDBManager:
                 with dbm.open(file_path, 'r') as individual_store:
                     db_secured = individual_store.get('secured_user_string').decode('utf-8')
                     if db_secured is None:
-                        logger.error(f"[DISPLAY] Provided Secured User String does not exist for UID: {user_id}")
+                        logger.error(f"[CLOSE ACCOUNT] Provided Secured User String does not exist for UID: {user_id}")
                         return 'User not found'
                     check_integrity = db_secured == secured_user_string
                     if not check_integrity:
-                        logger.error(f"[DISPLAY] Provided Secured User String does not match for UID: {user_id}")
+                        logger.error(f"[CLOSE ACCOUNT] Provided Secured User String does not match for UID: {user_id}")
                     os.remove(file_path)
                     if os.path.exists(file_path):
-                        logger.warning(f"[DISPLAY] DBM file not deleted")
+                        logger.warning(f"[CLOSE ACCOUNT] DBM file not deleted")
                         return 
-                    logger.info[f"[DISPLAY] Account deleted successfully for UID: {user_id}"]
+                    logger.info[f"[CLOSE ACCOUNT] Account deleted successfully for UID: {user_id}"]
             except Exception as e:
-                logger.error(f"[RECOVER] {e}", exc_info=True)
+                logger.error(f"[CLOSE ACCOUNT] {e}", exc_info=True)
                 return 'Error deleting account'
             
-        logger.error(f"[RECOVER] DBM not found for user: {user_id}")
+        logger.error(f"[CLOSE ACCOUNT] DBM not found for user: {user_id}")
         return 'DBM not found'    
