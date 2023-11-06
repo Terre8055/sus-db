@@ -14,6 +14,7 @@ from typing import (
 )
 from logging.handlers import RotatingFileHandler
 import argon2
+import shortuuid
 from argon2 import PasswordHasher
 from dotenv import load_dotenv
 
@@ -174,6 +175,15 @@ class UserDBManager:
         hashed_user_string = passwd_hash.hash(user_string_bytes)
         return hashed_user_string
 
+    def generate_secured_string(self) -> str:
+        """Method to generate secured user string 
+        using the global uuid and shortuuid module
+        """
+        unique_id = uuid.uuid4()
+        secure_user_string = shortuuid.encode(unique_id)
+        return secure_user_string
+
+
     def store_user_string(
             self,
             req: Dict[str, str]) \
@@ -202,10 +212,8 @@ class UserDBManager:
             )
 
             if hash_string is not None:
-                secure_user_string = base64.urlsafe_b64encode(
-                    hash_string
-                ).decode('utf-8')
-                individual_store['secured_user_string'] = secure_user_string
+                secured_user_string = self.generate_secured_string().encode('utf-8')
+                individual_store['secured_user_string'] = secured_user_string
                 individual_store['_id'] = self.__unique_identifier.encode(
                     'utf-8')
                 individual_store['created_on'] = str(
