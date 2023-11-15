@@ -8,7 +8,7 @@ from redis_om import get_redis_connection
 load_dotenv()
 
 # DBM CONFIGURATION
-db_file_name = os.getenv('FILE_NAME')
+db_file_name = 'user_db'
 get_path = os.getenv('GET_PATH')
 get_log_path = os.getenv('LOG_PATH')
 
