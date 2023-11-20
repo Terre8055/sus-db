@@ -1,14 +1,14 @@
+Babel==2.12.1
+cryptography==41.0.4
 alabaster==0.7.13
 annotated-types==0.5.0
 argon2-cffi==23.1.0
 argon2-cffi-bindings==21.2.0
 async-timeout==4.0.3
-Babel==2.12.1
 certifi==2023.7.22
 cffi==1.16.0
 charset-normalizer==3.3.0
 click==8.1.7
-cryptography==41.0.4
 docutils==0.18.1
 hiredis==2.2.3
 idna==3.4
