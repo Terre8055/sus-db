@@ -14,6 +14,7 @@ from typing import (
 )
 from logging.handlers import RotatingFileHandler
 import argon2
+import shortuuid
 from argon2 import PasswordHasher
 from dotenv import load_dotenv
 
@@ -174,6 +175,15 @@ class UserDBManager:
         hashed_user_string = passwd_hash.hash(user_string_bytes)
         return hashed_user_string
 
+    def generate_secured_string(self) -> str:
+        """Method to generate secured user string 
+        using the global uuid and shortuuid module
+        """
+        unique_id = uuid.uuid4()
+        secure_user_string = shortuuid.encode(unique_id)
+        return secure_user_string
+
+
     def store_user_string(
             self,
             req: Dict[str, str]) \
@@ -202,10 +212,8 @@ class UserDBManager:
             )
 
             if hash_string is not None:
-                secure_user_string = base64.urlsafe_b64encode(
-                    hash_string
-                ).decode('utf-8')
-                individual_store['secured_user_string'] = secure_user_string
+                secured_user_string = self.generate_secured_string().encode('utf-8')
+                individual_store['secured_user_string'] = secured_user_string
                 individual_store['_id'] = self.__unique_identifier.encode(
                     'utf-8')
                 individual_store['created_on'] = str(
@@ -266,8 +274,8 @@ class UserDBManager:
             logger.error(f"[VERIF] No database found for UID: {user_id}")
             return f"No database found for UID: {user_id}"
 
-    def display_user_db(self, user_id) \
-            -> Dict[str | bytes, str]:
+    def display_user_db(self, user_id: str) \
+            -> str | Dict[str | bytes, str]:
         """Display the contents of the user-specific database
 
         Returns:
@@ -277,14 +285,18 @@ class UserDBManager:
         file_name = f"user_db_{user_id}"
         file_path = os.path.join(self.__get_path, file_name)
         
-        with dbm.open(file_path, 'r') as individual_store:
-            for key in individual_store.keys():
-                try:
-                    view_database[key] = individual_store[key].decode('utf-8')
-                except UnicodeDecodeError:
-                    view_database[key] = individual_store[key].hex()
+        if os.path.exists(file_path):
+            with dbm.open(file_path, 'r') as individual_store:
+                for key in individual_store.keys():
+                    try:
+                        view_database[key] = individual_store[key].decode('utf-8')
+                    except UnicodeDecodeError:
+                        view_database[key] = individual_store[key].hex()
 
-        return view_database
+                    return view_database
+                
+        logger.error(f"[DISPLAY] No database founD for UID: {user_id}")
+        return f"No database found for UID: {user_id}"
 
     def check_sus_integrity(self, req: Dict[str, str]) -> str:
         """Check secured user strings integrity before restoring dbm
@@ -367,4 +379,48 @@ class UserDBManager:
                     logger.error(f"[RECOVER] {e}", exc_info=True)
 
         logger.error(f"[RECOVER] DBM not found for user: {get_uid}")
-        return "DBM not found"                           
+        return "DBM not found"
+    
+    
+    def close_account(self, req: Dict[str, str]) -> str:
+        """Method to support permanent account deletion
+
+        Args:
+            req (Dict): request param (uid, secured user string)
+
+        Raises:
+            KeyError: KeyError when empty queries are passed in
+
+        Returns:
+            str: Success if successful 
+        """
+        user_id = req.get('uid')
+        secured_user_string = req.get('sus')
+        if not user_id or not secured_user_string:
+            raise KeyError('Error parsing user input')
+        
+        file_name = f"user_db_{user_id}"
+        file_path = os.path.join(self.__get_path, file_name)
+        
+        if os.path.exists(file_path):
+            try:
+                with dbm.open(file_path, 'r') as individual_store:
+                    db_secured = individual_store.get('secured_user_string')
+                    if db_secured is None:
+                        logger.error(f"[CLOSE ACCOUNT]  Account does not exist for UID: {user_id}")
+                        return 'User not found'
+                    check_integrity = db_secured.decode('utf-8') == secured_user_string
+                    if not check_integrity:
+                        return 'Provided Secured User String does not match for UID'
+                    os.remove(file_path)
+                    if os.path.exists(file_path):
+                        logger.warning(f"[CLOSE ACCOUNT] DBM file not deleted")
+                        return 'Error' 
+                    logger.info(f"[CLOSE ACCOUNT] Account deleted successfully for UID: {user_id}")
+                    return 'Success'
+            except Exception as e:
+                logger.error(f"[CLOSE ACCOUNT] {e}", exc_info=True)
+                return 'Error deleting account'
+     
+        logger.error(f"[CLOSE ACCOUNT] DBM not found for user: {user_id}")
+        return 'DBM not found'    
