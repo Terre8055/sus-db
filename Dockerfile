@@ -17,6 +17,13 @@ COPY . /app
 # Set the PYTHONPATH environment variable
 ENV PYTHONPATH=/app/src
 
-# Define the entry command
-ENTRYPOINT ["python", "/app/src/susdb_cli.py"]
+# Copy the script into the container
+COPY welcome_script.sh /usr/local/bin/welcome_script.sh
+
+# Make the script executable
+RUN chmod +x /usr/local/bin/welcome_script.sh
+
+# Run the script when the container starts
+CMD ["/usr/local/bin/welcome_script.sh"]
+
 
