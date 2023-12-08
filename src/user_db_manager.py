@@ -189,7 +189,8 @@ class UserDBManager:
             req: Dict[str, str]) \
             -> Dict[str, str] | None:
         """Store user string after encryption and generate
-        secure user string using base64 encoding
+        secure user string using uuid and shortuuid helper\
+        encoding
         """
         for key in req.keys():
             if not req.get(key):
