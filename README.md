@@ -56,25 +56,33 @@ Read the [Classical Post Office Story](https://github.com/Terre8055/sus-db/wiki/
 To get the latest `susdb` container image from Docker Hub, run:
 
 ```bash
-sudo docker pull terre8055/susdb:latest
+sudo docker pull terre8055/susdb:0.0.1
 ```
 
 ### Run the `susdb` Container
 
 To run the `susdb` container and mount a volume for local access to log files and dbm, use the following command:
 
-```bash
-sudo docker run -v /home/data:/home/data -it susdb
-```
+First, make sure this directory and file exists on your local machine
 
-This command mounts your local `/home/data` directory to the container's `/home/data` directory, enabling access to log files and dbm.
+```bash
+mkdir -p $HOME/sus-db/ && touch $HOME/sus-db/susdb.log
+```
+if you are running docker as rootless; 
+
+```bash
+docker run --name <any-name> -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb:0.0.1 
+```
+else; add the sudo
+
+This command mounts your local `$HOME/sus-db` directory to the container's `$HOME/sus-db` directory, enabling access to log files and dbm.
 
 ### Store User Data
 
 To store user data using `susdb`, run the following command:
 
 ```bash
-sudo docker run -it susdb python /app/src/susdb_cli.py store --string=<user_string: str>
+docker run --name tiger-woodye -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb:0.0.1  python /app/src/susdb_cli.py store --string='Mike'
 ```
 A unique id will be generated used to access for local dbs
 Replace `<user_string: str>` with the actual user string you want to store.
@@ -84,7 +92,7 @@ Replace `<user_string: str>` with the actual user string you want to store.
 To retrieve user data using `susdb`, run the following command:
 
 ```bash
-sudo docker run -it susdb python /app/src/susdb_cli.py retrieve --key=<data_to_retrieve: str> --uid=<uid: str>
+docker run --name tiger-woodye -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb:0.0.1  python /app/src/susdb_cli.py retrieve --key=<data_to_retrieve: str> --uid=<uid: str>
 ```
 
 Replace `<uid: str>` with the generated unique id after storing your string.
@@ -95,7 +103,7 @@ Replace `<key: str>` with the actual user data you want to retrieve.
 To display user db using `susdb`, run the following command:
 
 ```bash
-sudo docker run -it susdb python /app/src/susdb_cli.py view --uid=<uid: str>
+docker run --name tiger-woodye -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb:0.0.1  python /app/src/susdb_cli.py python /app/src/susdb_cli.py view --uid=<uid: str>
 ```
 
 Replace `<uid: str>` with the generated unique id after storing your string.
@@ -105,7 +113,8 @@ Replace `<uid: str>` with the generated unique id after storing your string.
 To verify user cred using `susdb`, run the following command:
 
 ```bash
-sudo docker run -it susdb python /app/src/susdb_cli.py verify --string=<user_string: str> --uid=<uid: str>
+docker run --name tiger-woodye -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb:0.0.1  python /app/src/susdb_cli.py python /app/src/susdb_cli.py verify --string=<user_string: str> --uid=<uid: str>
+```
 
 
 Replace `<uid: str>` with the generated unique id after storing your string.
@@ -119,4 +128,7 @@ SusDB is designed to secure and manage sensitive user data efficiently. Its uniq
 ![sus_db_design](images/diagram_sus.png)
 
 Find docs here [SUS-DB Documentation](https://github.com/Terre8055/sus-db/wiki)
+
+
+Issues are welcome and will be resolved as early as possible
 
