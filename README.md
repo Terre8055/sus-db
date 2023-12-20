@@ -125,7 +125,7 @@ Replace `<user_string: str>` with the actual user string.
 
 SusDB is designed to secure and manage sensitive user data efficiently. Its unique architecture and security features make it an ideal choice for applications that require privacy and data protection. Explore the wiki to learn how to utilize SusDB effectively and ensure the security of your user data.
 
-![sus_db_design](images/diagram_sus.png)
+![sus_db_design](images/arch.png)
 
 Find docs here [SUS-DB Documentation](https://github.com/Terre8055/sus-db/wiki)
 
