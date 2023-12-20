@@ -1,33 +1,134 @@
-# sus-db: Secure User String Database
+# susdb
 
-SUS-DB is a microservice dedicated to managing Secure User Strings (SUS) within our social app infrastructure. The service utilizes native Python dbm storage to securely store and handle user-specific data, focusing on privacy and efficient data access. SUS-DB interfaces with our central Redis station for synchronized updates and enables a seamless and secure experience for our users.
+SusDB is a secure user string database system designed to manage and protect sensitive user data. This wiki serves as a guide to understanding SusDB's architecture, features, data security, and the post office metaphor that helps illustrate its functions.
 
-**Key Features**:
+## Table of Contents
 
-- Efficient and secure storage of Secure User Strings (SUS) for user identification.
-- Integration with central Redis station for synchronization and real-time updates.
-- Native Python dbm storage for optimized data management.
-- Privacy-centric design, ensuring minimal sensitive data persistence.
+- [Introduction](#introduction)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Data Security](#data-security)
+- [Account Recovery](#account-recovery)
+- [The Classical Post Office Story](#the-classical-post-office-story)
+- [Testing SusDB locally using Docker](#running-locally)
 
-## Data Persistency Design and Architecture
+## Introduction
 
-Data architecture where we have a single store or repository, that we call a central station using redis which synchronises with individual stores, which we call IRs. Now every client or user when signs up is allocated a store or repo which uses the native python dbm. And when the individual dbm by python is updated, it puts a snapshot to the central store, which in turns syncs and updates the remaining IRs.
+SusDB is a secure and efficient database system built to manage sensitive user data. It focuses on securing user strings and enables data recovery when needed. It operates using a post office metaphor, where each user has a secured "box" to store their sensitive data.
 
-Since we hate an SPOF, we also have CS slaves which also go in sync with the CS. 
+For a detailed overview of SusDB, visit the [Introduction](https://github.com/Terre8055/sus-db/wiki) page.
 
-**Model Schema for User**
+## Features
 
-- user_string: `Secure User String eg. <g26454xd87q5>` //to be hashed and transformed into a `user_name` after serialization for ux.
-- user_name: `default=None`
-  
-**Example Flow:**
+SusDB boasts a set of essential features that ensure data privacy and security. These features include hashing user strings, integrity checks, data serialization, and account recovery management. Understanding these features is crucial for utilizing SusDB effectively.
 
-1. User signs up and provides a Secure User String (e.g., "g26454xd87q5").
-2. The provided user_string is hashed and transformed to create a user_name (e.g., "user123").
-3. The user_name ("user123") is associated with the user's account, providing a username for the user.
-4. The original Secure User String is securely hashed and stored in the user's data store for authentication and identification purposes.
+Explore the full list of features on the [Features](https://github.com/Terre8055/sus-db/wiki/sus%E2%80%90db:-Secured-User-Strings-Database) page.
+
+## Architecture
+
+The architecture of SusDB revolves around securely storing user data and ensuring its integrity. The system uses a unique file-based approach for database management and a central repository (Redis) for critical resources. Learn how SusDB operates to protect user data.
+
+Check out the [Architecture](https://github.com/Terre8055/sus-db/wiki/Data-Persistency-Architecture) page for a comprehensive understanding.
+
+## Data Security
+
+Data security is a top priority for SusDB. It relies on the Argon2 hashing algorithm to safeguard user strings, ensuring that sensitive information remains confidential. Frequent maintenance and backup procedures are in place to protect against data loss and corruption.
+
+Visit the [Data Security](https://github.com/Terre8055/sus-db/wiki/Data-Security-and-Account-Recovery) page for a deep dive into how SusDB prioritizes your data's safety.
+
+## Account Recovery
+
+SusDB includes an account recovery system to assist users in regaining access to their data if they forget their user strings. This process involves verifying user identity and integrity checks to protect sensitive information.
+
+Learn more about the account recovery process in the [Account Recovery](https://github.com/Terre8055/sus-db/wiki/Data-Security-and-Account-Recovery) section.
+
+## The Classical Post Office Story
+
+To help understand SusDB's operations, we've drawn a metaphor with a classical post office. Just like a post office assigns secure boxes and manages keys, SusDB uses file IDs to protect user data. Redis serves as a central repository, but it doesn't store data directly. This metaphor highlights SusDB's unique approach to data management.
+
+Read the [Classical Post Office Story](https://github.com/Terre8055/sus-db/wiki/The-Classical-Post-Office-Story:-A-Metaphor-for-SusDB) for a creative perspective on SusDB's functions.
+
+## Running Locally
+
+
+### Pull the `susdb` Container Image
+
+To get the latest `susdb` container image from Docker Hub, run:
+
+```bash
+sudo docker pull terre8055/susdb:0.0.1
+```
+
+### Run the `susdb` Container
+
+To run the `susdb` container and mount a volume for local access to log files and dbm, use the following command:
+
+First, make sure this directory and file exists on your local machine
+
+```bash
+mkdir -p $HOME/sus-db/ && touch $HOME/sus-db/susdb.log
+```
+if you are running docker as rootless; 
+
+```bash
+docker run --name <any-name> -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb:0.0.1 
+```
+else; add the sudo
+
+This command mounts your local `$HOME/sus-db` directory to the container's `$HOME/sus-db` directory, enabling access to log files and dbm.
+
+### Store User Data
+
+To store user data using `susdb`, run the following command:
+
+```bash
+docker run --name tiger-woodye -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb:0.0.1  python /app/src/susdb_cli.py store --string='Mike'
+```
+A unique id will be generated used to access for local dbs
+Replace `<user_string: str>` with the actual user string you want to store.
+
+### Deserialize and Retrieve User Data
+
+To retrieve user data using `susdb`, run the following command:
+
+```bash
+docker run --name tiger-woodye -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb:0.0.1  python /app/src/susdb_cli.py retrieve --key=<data_to_retrieve: str> --uid=<uid: str>
+```
+
+Replace `<uid: str>` with the generated unique id after storing your string.
+Replace `<key: str>` with the actual user data you want to retrieve.
+
+### Display contents of user db
+
+To display user db using `susdb`, run the following command:
+
+```bash
+docker run --name tiger-woodye -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb:0.0.1  python /app/src/susdb_cli.py python /app/src/susdb_cli.py view --uid=<uid: str>
+```
+
+Replace `<uid: str>` with the generated unique id after storing your string.
+
+### Verify Crentials
+
+To verify user cred using `susdb`, run the following command:
+
+```bash
+docker run --name tiger-woodye -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb:0.0.1  python /app/src/susdb_cli.py python /app/src/susdb_cli.py verify --string=<user_string: str> --uid=<uid: str>
+```
+
+
+Replace `<uid: str>` with the generated unique id after storing your string.
+Replace `<user_string: str>` with the actual user string.
+
+
+## Conclusion
+
+SusDB is designed to secure and manage sensitive user data efficiently. Its unique architecture and security features make it an ideal choice for applications that require privacy and data protection. Explore the wiki to learn how to utilize SusDB effectively and ensure the security of your user data.
 
 ![sus_db_design](images/diagram_sus.png)
 
-Find docs here [IR SUS-DB Documentation](https://ir-susdb.netlify.app/)
+Find docs here [SUS-DB Documentation](https://github.com/Terre8055/sus-db/wiki)
+
+
+Issues are welcome and will be resolved as early as possible
 

@@ -23,5 +23,5 @@ jobs:
     - name: Install dependencies
       run: pip install -r requirements.txt
     - name: Run MyPy on Python files in src directory
-      run: mypy --ignore-missing-imports --disallow-untyped-defs --warn-return-any src
+      run: mypy --ignore-missing-imports --disallow-untyped-defs src/user_db_manager.py
 

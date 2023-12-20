@@ -189,7 +189,8 @@ class UserDBManager:
             req: Dict[str, str]) \
             -> Dict[str, str] | None:
         """Store user string after encryption and generate
-        secure user string using base64 encoding
+        secure user string using uuid and shortuuid helper\
+        encoding
         """
         for key in req.keys():
             if not req.get(key):
@@ -368,9 +369,7 @@ class UserDBManager:
                         logger.info(f"[RECOVER] String hashed successfully for file: {get_uid}")
                     hash_string_bytes = individual_store.get('hash_string')
                     if hash_string_bytes is not None:
-                        secure_user_string = base64.urlsafe_b64encode(
-                            hash_string_bytes
-                        ).decode('utf-8')
+                        secure_user_string = self.generate_secured_string().encode("utf-8")
                         individual_store['secured_user_string'] = secure_user_string
                         response_data.update(_id=get_uid, sus=secure_user_string)
                         logger.info(f"[RECOVER] Recovery completed, sus assigned")
