@@ -31,7 +31,6 @@ class User(JsonModel):
 class Session(JsonModel):
     session_id: Optional[str]
     is_authenticated: bool = Field(default=False)
-    ir_id: str = Field(index=True)
     timestamp: str = Field(default=datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT'))
 
     class Meta:
