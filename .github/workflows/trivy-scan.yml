@@ -29,5 +29,5 @@ jobs:
             aws-region: us-east-1
 
       - name: Run Trivy scan
-        run: trivy aws --region us-east-1
+        run: trivy aws --region us-east-1 --service ec2 --compliance aws-cis-1.2 
 
