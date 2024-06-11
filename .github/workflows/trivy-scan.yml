@@ -48,38 +48,29 @@ jobs:
           aws s3 cp ${TRIVY_OUTPUT} s3://github-actions-s3-v1/trivy_reports/${TRIVY_OUTPUT}
 
 
-      
-      - name: Run Trivy and save report
-        id: run_trivy
-        run: |
-          trivy aws --region us-east-1 --format table > trivy_report.txt
-          echo "TRIVY_REPORT_PATH=trivy_report.txt" >> $GITHUB_ENV
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
 
-      - name: Read Trivy report content
-        id: read_report
+      - name: Install dependencies
         run: |
-          CONTENT=$(cat $TRIVY_REPORT_PATH)
-          echo "CONTENT=${CONTENT}" >> $GITHUB_ENV
+          python -m pip install --upgrade pip
+          pip install slack_sdk
 
-      - name: Slack Notification
-        uses: rtCamp/action-slack-notify@v2
+      - name: Upload Trivy report to Slack
         env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_CHANNEL: experiments
-          SLACK_CUSTOM_PAYLOAD: '{
-            "text": "Trivy Report Upload",
-            "attachments": [
-              {
-                "title": "Trivy Report for ${{ env.TIMESTAMP }}",
-                "text": ${{ env.CONTENT }},
-                "color": "#36a64f"  // Optional: Customize attachment color
-              }
-            ]
-          }'
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          SLACK_CHANNEL: experiments  # Update with your Slack channel
+          
+          TIMESTAMP: ${{ format('{0:yyyyMMdd}', github.run_number) }}
+
+        run: |
+          python upload_to_slack.py
 
       - name: Cleanup
         if: always()
         run: |
           TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
-          rm -f ${TRIVY_OUTPUT} file.txt
+          rm -f ${TRIVY_OUTPUT}
