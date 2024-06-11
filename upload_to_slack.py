@@ -6,7 +6,7 @@ def upload_file_to_slack(token, channel, filename, title):
     client = WebClient(token=token)
 
     try:
-        response = client.files_upload(
+        response = client.files_upload_v2()(
             channels=channel,
             file=filename,
             filename=title,
