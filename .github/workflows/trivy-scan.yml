@@ -60,23 +60,28 @@ jobs:
           curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Trivy Report uploaded to S3 :white_check_mark:\"}" ${{ secrets.SLACK_WEBHOOK_URL }}
 
      
-      - name: Send Slack Message - Sending Report Content
+      - name: Set up environment variables
         env:
-          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-          SLACK_CHANNEL: "#experiments"
-          
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_CHANNEL: general
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_ICON: https://github.com/rtCamp.png?size=48
+          SLACK_TITLE: "Trivy Report"
+          SLACK_USERNAME: trivy_success
         run: |
-          TIMESTAMP=$(date +%Y%m%d)
-          TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
-          
-          REPORT_CONTENT=$(cat ${TRIVY_OUTPUT})
+          export TIMESTAMP=$(date +%Y%m%d)
+          echo "TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
 
-          cat ${TRIVY_OUTPUT}
-
-          ESCAPED_REPORT_CONTENT=$(echo "${REPORT_CONTENT}" | sed 's/"/\\"/g' | sed "s/'/\\'/g")
-
-          # Send the report content as a message to Slack
-          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Trivy Report Content:\n\`\`\`${ESCAPED_REPORT_CONTENT}\`\`\`\", \"channel\":\"${SLACK_CHANNEL}\"}" -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/chat.postMessage      
+      - name: Slack Notification for File Upload
+        uses: rtCamp/action-slack-notify@v2
+        with:
+          slack_webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          slack_channel: ${{ env.SLACK_CHANNEL }}
+          slack_color: ${{ env.SLACK_COLOR }}
+          slack_icon: ${{ env.SLACK_ICON }}
+          slack_message: ${{ env.SLACK_TITLE }} Upload for ${TIMESTAMP}
+          slack_username: ${{ env.SLACK_USERNAME }}
+          slack_file_upload: "trivy_report_${TIMESTAMP}.json"
 
       - name: Cleanup
         if: always()
