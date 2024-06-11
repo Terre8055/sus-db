@@ -71,7 +71,12 @@ jobs:
           
           REPORT_CONTENT=$(cat ${TRIVY_OUTPUT})
 
-          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Trivy Report Content:\n\`\`\`${REPORT_CONTENT}\`\`\`\", \"channel\":\"${SLACK_CHANNEL}\"}" -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/chat.postMessage
+          cat ${TRIVY_OUTPUT}
+
+          ESCAPED_REPORT_CONTENT=$(echo "${REPORT_CONTENT}" | sed 's/"/\\"/g' | sed "s/'/\\'/g")
+
+          # Send the report content as a message to Slack
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Trivy Report Content:\n\`\`\`${ESCAPED_REPORT_CONTENT}\`\`\`\", \"channel\":\"${SLACK_CHANNEL}\"}" -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/chat.postMessage      
 
       - name: Cleanup
         if: always()
