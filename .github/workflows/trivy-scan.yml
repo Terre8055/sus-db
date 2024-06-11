@@ -1,7 +1,3 @@
-
-
-
-
 name: AWS Trivy Scan
 
 on:
@@ -10,7 +6,7 @@ on:
       - develop
 
 permissions:
-  id-token: write   # This is required for requesting the JWT
+  id-token: write
   contents: read 
 
 jobs:
@@ -69,8 +65,14 @@ jobs:
         run: |
           TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
-          SLACK_UPLOAD_URL=$(curl -s -F file=@${TRIVY_OUTPUT} -F channels=CHANNEL_ID -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/files.upload)
-          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Results uploaded to S3 for ${TRIVY_OUTPUT}\", \"attachments\": [{\"text\": \"Trivy scan results uploaded to Slack: ${SLACK_UPLOAD_URL}\", \"color\": \"#36a64f\"}]}" ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_CHANNEL="#experiments"
+          SLACK_TITLE="Trivy Report ${TIMESTAMP}"
+          SLACK_INITIAL_MESSAGE="Uploading Trivy Report to Slack :file_upload:"
+          SLACK_UPLOAD_MESSAGE="Trivy Report uploaded to Slack :white_check_mark:"
+
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"${SLACK_INITIAL_MESSAGE}\", \"channel\":\"${SLACK_CHANNEL}\"}" ${{ secrets.SLACK_WEBHOOK_URL }}
+          curl -F file=@${TRIVY_OUTPUT} -F "initial_comment=${SLACK_TITLE}" -F channels=${SLACK_CHANNEL} -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/files.upload
+
 
       - name: Cleanup
         if: always()
