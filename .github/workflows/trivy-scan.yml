@@ -67,7 +67,7 @@ jobs:
           
         run: |
           TIMESTAMP=$(date +%Y%m%d)
-          TRIVY_OUTPUT: "trivy_report_${TIMESTAMP}.json"
+          TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
           
           REPORT_CONTENT=$(cat ${TRIVY_OUTPUT})
 
