@@ -77,7 +77,7 @@ jobs:
         run: |
           TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
-          SLACK_CHANNEL="#your-channel-name"
+          SLACK_CHANNEL="#experiments"
           SLACK_TITLE="Trivy Report ${TIMESTAMP}"
           SLACK_INITIAL_MESSAGE="Uploading Trivy Report to Slack :file_upload:"
           SLACK_UPLOAD_MESSAGE="Trivy Report uploaded to Slack :white_check_mark:"
