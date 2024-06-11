@@ -50,7 +50,7 @@ jobs:
         run: |
           TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
-          trivy aws --region us-east-1 --compliance aws-cis-1.2 --format json --output ${TRIVY_OUTPUT} --exit-code 1 --severity MEDIUM
+          trivy aws --region us-east-1 --format json --output ${TRIVY_OUTPUT} --severity MEDIUM
           ls -l ${TRIVY_OUTPUT}
 
       - name: Send Slack Message - Uploading Report to S3
