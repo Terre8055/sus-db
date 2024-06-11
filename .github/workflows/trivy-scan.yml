@@ -20,7 +20,6 @@ jobs:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
         run: |
           curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Generating Trivy Report :robot_face:\"}" ${{ secrets.SLACK_WEBHOOK}}
-
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -31,7 +30,6 @@ jobs:
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.52.1
           sudo apt-get update && sudo apt-get install -y jq
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1.7.0
         with:
@@ -44,61 +42,36 @@ jobs:
           TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
           trivy aws --region us-east-1 --format json --output ${TRIVY_OUTPUT} --severity MEDIUM
           ls -l ${TRIVY_OUTPUT}
-
       - name: Upload Trivy report to S3
         run: |
           TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
           aws s3 cp ${TRIVY_OUTPUT} s3://github-actions-s3-v1/trivy_reports/${TRIVY_OUTPUT}
 
 
-      - name: Send Slack Message - Report Uploaded
-        env:
-          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Trivy Report uploaded to S3 :white_check_mark:\"}" ${{ secrets.SLACK_WEBHOOK }}
-
       - name: Read Trivy report content
         id: read_report
         run: |
-          CONTENT=$(cat trivy_report_${{env.TIMESTAMP}}.json | jq -Rs .)
+          CONTENT=$(trivy aws --region us-east-1 --format table)
           echo "CONTENT=${CONTENT}" >> $GITHUB_ENV
 
-      - name: Send Slack Message - Uploading Report to Slack
-        id: send_slack_message
+
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@v2
         env:
-          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           SLACK_CHANNEL: experiments
-          SLACK_TITLE: "Trivy Report--${{env.TIMESTAMP}}"
-        run: |
-          TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
-          
-          if [ -f "${TRIVY_OUTPUT}" ]; then
-            
-            UPLOAD_RESPONSE=$(curl -s -X POST -H "Authorization: Bearer ${SLACK_TOKEN}" -H "Content-Type: application/json" --data "{\"files\":[{\"filename\":\"${TRIVY_OUTPUT}\",\"title\":\"${SLACK_TITLE}\",\"channels\":[\"${SLACK_CHANNEL}\"]}]}" https://slack.com/api/files.getUploadURLExternal)
-            echo $UPLOAD_RESPONSE
-            UPLOAD_URL=$(echo $UPLOAD_RESPONSE | jq -r '.files[0].upload_url')
-            echo $UPLOAD_URL
+          SLACK_CUSTOM_PAYLOAD: '{
+            "text": "Trivy Report Upload",
+            "attachments": [
+              {
+                "title": "Trivy Report for ${{ env.TIMESTAMP }}",
+                "text": ${{ env.CONTENT }},
+                ]
+              }
+            ]
+          }'
 
-            FILE_ID=$(echo $UPLOAD_RESPONSE | jq -r '.files[0].id')
-            echo $FILE_ID
-
-
-        
-            if [ -n "$UPLOAD_URL" ]; then
-              curl -s -X POST -F "file=@${TRIVY_OUTPUT}" "${UPLOAD_URL}"
-
-      
-              curl -s -X POST -H "Authorization: Bearer ${SLACK_TOKEN}" -H "Content-Type: application/json" --data "{\"files\":[{\"id\":\"${FILE_ID}\"}]}" https://slack.com/api/files.completeUploadExternal
-            else
-              echo "Failed to get upload URL from Slack."
-              exit 1
-            fi
-          else
-            echo "File ${TRIVY_OUTPUT} does not exist."
-            exit 1
-          fi    
-      
       - name: Cleanup
         if: always()
         run: |
