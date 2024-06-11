@@ -39,7 +39,7 @@ jobs:
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: us-east-1
 
-      - name: Run Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scan
         run: |
           TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
           trivy aws --region us-east-1 --format json --output ${TRIVY_OUTPUT} --severity MEDIUM
