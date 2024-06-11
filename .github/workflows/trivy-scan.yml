@@ -71,30 +71,14 @@ jobs:
         run: |
           curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Trivy Report uploaded to S3 :white_check_mark:\"}" ${{ secrets.SLACK_WEBHOOK_URL }}
 
-      - name: Send Slack Message - Uploading Report to Slack
+      - name: Upload Trivy report to Slack
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
         run: |
           TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
-          SLACK_CHANNEL="#experiments"
-          SLACK_TITLE="Trivy Report ${TIMESTAMP}"
-          SLACK_INITIAL_MESSAGE="Uploading Trivy Report to Slack :file_upload:"
-          SLACK_UPLOAD_MESSAGE="Trivy Report uploaded to Slack :white_check_mark:"
-
-        
-          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"${SLACK_INITIAL_MESSAGE}\", \"channel\":\"${SLACK_CHANNEL}\"}" ${{ secrets.SLACK_WEBHOOK_URL }}
-
-          
-          UPLOAD_RESPONSE=$(curl -F file=@${TRIVY_OUTPUT} -F "initial_comment=${SLACK_TITLE}" -F channels=${SLACK_CHANNEL} -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/files.upload)
-
-          
-          if [[ $(echo ${UPLOAD_RESPONSE} | jq -r '.ok') == "true" ]]; then
-            curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"${SLACK_UPLOAD_MESSAGE}\", \"channel\":\"${SLACK_CHANNEL}\"}" ${{ secrets.SLACK_WEBHOOK_URL }}
-          else
-            echo "Failed to upload Trivy report to Slack: $(echo ${UPLOAD_RESPONSE} | jq -r '.error')"
-            exit 1
-          fi
+          SLACK_UPLOAD_URL=$(curl -s -F file=@${TRIVY_OUTPUT} -F channels=CHANNEL_ID -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/files.upload | jq -r '.file.url_private')
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Results uploaded to S3 for ${TRIVY_OUTPUT}\", \"attachments\": [{\"text\": \"Trivy scan results uploaded to Slack: ${SLACK_UPLOAD_URL}\", \"color\": \"#36a64f\"}]}" https://hooks.slack.com/services/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
 
       - name: Cleanup
         if: always()
