@@ -1,4 +1,5 @@
 
+
 name: AWS Trivy Scan
 
 on:
@@ -7,7 +8,7 @@ on:
       - develop
 
 permissions:
-  id-token: write   
+  id-token: write   # This is required for requesting the JWT
   contents: read 
 
 jobs:
@@ -22,6 +23,7 @@ jobs:
       - name: Install Trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.52.1
+          sudo apt-get update && sudo apt-get install -y jq
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1.7.0
@@ -35,7 +37,7 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
           trivy aws --region us-east-1 --format json --output ${TRIVY_OUTPUT} --severity MEDIUM
-          ls -al
+          
 
       - name: Upload Trivy report to S3
         run: |
@@ -47,8 +49,8 @@ jobs:
         run: |
           TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
-          SLACK_MESSAGE=$(cat ${TRIVY_OUTPUT})
-          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Trivy scan results uploaded to S3:\", \"attachments\": [{\"title\": \"${TRIVY_OUTPUT}\", \"text\": \`${SLACK_MESSAGE}\`}]}" ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL=${{ secrets.SLACK_WEBHOOK_URL }}
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Results uploaded to S3 for ${TRIVY_OUTPUT}\"}" ${SLACK_WEBHOOK_URL}
 
       - name: Cleanup
         if: always()
