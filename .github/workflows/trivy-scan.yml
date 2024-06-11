@@ -9,9 +9,6 @@ permissions:
   id-token: write
   contents: read
 
-env:
-  TIMESTAMP: "$(date +'%Y%m%d')"
-
 jobs:
   scan:
     name: AWS Scan
@@ -27,6 +24,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Set up date environment variable
+        run: echo "TIMESTAMP=$(date +%Y%m%d)" >> $GITHUB_ENV
+
       - name: Install Trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.52.1
@@ -41,13 +41,13 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         run: |
-          TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
+          TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
           trivy aws --region us-east-1 --format json --output ${TRIVY_OUTPUT} --severity MEDIUM
           ls -l ${TRIVY_OUTPUT}
 
       - name: Upload Trivy report to S3
         run: |
-          TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
+          TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
           aws s3 cp ${TRIVY_OUTPUT} s3://github-actions-s3-v1/trivy_reports/${TRIVY_OUTPUT}
 
       - name: Send Slack Message - Report Uploaded
@@ -58,12 +58,10 @@ jobs:
 
       - name: Set up environment variables
         run: |
-          export TIMESTAMP=$(date +%Y%m%d)
-          echo "TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
           echo "Without github workspace"
-          cat trivy_report_${TIMESTAMP}.json
+          cat trivy_report_${{env.TIMESTAMP}}.json
           echo "with github workspace"
-          cat ${{ github.workspace }}trivy_report_${TIMESTAMP}.json
+          cat ${{ github.workspace }}trivy_report_${{env.TIMESTAMP}}.json
 
       - name: Slack Notification
         uses: rtCamp/action-slack-notify@v2
@@ -76,7 +74,7 @@ jobs:
           SLACK_MESSAGE: "Trivy Report Upload"
           SLACK_TITLE: "Post Title"
           SLACK_USERNAME: trivy_success
-          SLACK_FILE_UPLOAD: "${{ github.workspace }}/trivy_report_${TIMESTAMP}.json"
+          SLACK_FILE_UPLOAD: "${{ github.workspace }}/trivy_report_${{ env.TIMESTAMP }}.json"
           SLACK_FOOTER: "RGT Operations"
 
       - name: Cleanup
