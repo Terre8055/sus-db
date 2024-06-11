@@ -59,6 +59,10 @@ jobs:
         run: |
           export TIMESTAMP=$(date +%Y%m%d)
           echo "TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
+          echo "Without github workspace"
+          cat trivy_report_${{env.TIMESTAMP}}.json
+          echo "with github workspace"
+          cat ${{ github.workspace }}trivy_report_${{env.TIMESTAMP}}.json
 
       - name: Slack Notification
         uses: rtCamp/action-slack-notify@v2
