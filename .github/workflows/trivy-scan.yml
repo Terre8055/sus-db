@@ -32,27 +32,28 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         run: |
-          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
           trivy aws --region us-east-1 --format json --output ${TRIVY_OUTPUT} --severity MEDIUM
           ls -al
 
       - name: Upload Trivy report to S3
         run: |
-          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
           aws s3 cp ${TRIVY_OUTPUT} s3://github-actions-s3-v1/trivy_reports/${TRIVY_OUTPUT}
 
       - name: Send results to Slack
         run: |
-          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
           SLACK_MESSAGE=$(cat ${TRIVY_OUTPUT})
           curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Trivy scan results uploaded to S3:\", \"attachments\": [{\"title\": \"${TRIVY_OUTPUT}\", \"text\": \`${SLACK_MESSAGE}\`}]}" ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Cleanup
+        if: always()
         run: |
-          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
           rm -f ${TRIVY_OUTPUT}
 
