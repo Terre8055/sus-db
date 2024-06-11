@@ -56,7 +56,7 @@ jobs:
       - name: Slack Notification
         run: |
           pip3 install slack_sdk
-          python3 slackmessenger.py
+          python3 ${{ github.workspace }}/slackmessenger.py
 
       - name: Cleanup
         if: always()
