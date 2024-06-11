@@ -55,6 +55,7 @@ jobs:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
         run: |
           curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Trivy Report uploaded to S3 :white_check_mark:\"}" ${{ secrets.SLACK_WEBHOOK }}
+          touch file.txt #placeholder
 
       - name: Slack Notification
         uses: rtCamp/action-slack-notify@v2
@@ -67,7 +68,7 @@ jobs:
           SLACK_MESSAGE: "Trivy Report Upload"
           SLACK_TITLE: "Post Title"
           SLACK_USERNAME: trivy_success
-          SLACK_FILE_UPLOAD: "./trivy_report_${{ env.TIMESTAMP }}.json"
+          SLACK_FILE_UPLOAD: file.txt
           SLACK_FOOTER: "RGT Operations"
 
       - name: Cleanup
@@ -75,4 +76,4 @@ jobs:
         run: |
           TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
-          rm -f ${TRIVY_OUTPUT}
+          rm -f ${TRIVY_OUTPUT} file.txt
