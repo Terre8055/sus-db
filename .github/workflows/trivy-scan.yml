@@ -59,41 +59,18 @@ jobs:
         run: |
           curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Trivy Report uploaded to S3 :white_check_mark:\"}" ${{ secrets.SLACK_WEBHOOK_URL }}
 
-      - name: Send Slack Message - Uploading Report to Slack
+     
+      - name: Send Slack Message - Sending Report Content
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           SLACK_CHANNEL: "#experiments"
-          SLACK_TITLE: "Trivy Report ${TIMESTAMP}"
-          SLACK_INITIAL_MESSAGE: "Uploading Trivy Report to Slack :file_upload:"
-          SLACK_UPLOAD_MESSAGE: "Trivy Report uploaded to Slack :white_check_mark:"
+          TRIVY_OUTPUT: "trivy_report_${TIMESTAMP}.json"
         run: |
-          TIMESTAMP=$(date +%Y%m%d)
-          TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
+          # Read the content of the Triv
+          REPORT_CONTENT=$(cat ${TRIVY_OUTPUT})
 
-          ls -al
-          
-          if [ -f "${TRIVY_OUTPUT}" ]; then
-            
-            curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"${SLACK_INITIAL_MESSAGE}\", \"channel\":\"${SLACK_CHANNEL}\"}" -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/chat.postMessage
-
-            
-            UPLOAD_URL=$(curl -s -X POST -F "file=@${TRIVY_OUTPUT}" -F "filename=${TRIVY_OUTPUT}" -F "title=${SLACK_TITLE}" -F channels=${SLACK_CHANNEL} -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/files.getUploadURLExternal | jq -r '.upload_url')
-
-            
-            UPLOAD_RESPONSE=$(curl -s -X POST -F "file=@${TRIVY_OUTPUT}" -F "filename=${TRIVY_OUTPUT}" -F "title=${SLACK_TITLE}" -F channels=${SLACK_CHANNEL} "${UPLOAD_URL}")
-
-            
-            if [[ $(echo ${UPLOAD_RESPONSE} | jq -r '.ok') == "true" ]]; then
-              curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"${SLACK_UPLOAD_MESSAGE}\", \"channel\":\"${SLACK_CHANNEL}\"}" -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/chat.postMessage
-            else
-              echo "Failed to upload Trivy report to Slack: $(echo ${UPLOAD_RESPONSE} | jq -r '.error')"
-              exit 1
-            fi
-          else
-            echo "Trivy report file ${TRIVY_OUTPUT} not found."
-            exit 1
-          fi
-
+          # Send the report content as a message to Slack
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Trivy Report Content:\n\`\`\`${REPORT_CONTENT}\`\`\`\", \"channel\":\"${SLACK_CHANNEL}\"}" -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/chat.postMessage
       - name: Cleanup
         if: always()
         run: |
