@@ -57,12 +57,19 @@ jobs:
         run: |
           curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Trivy Report uploaded to S3 :white_check_mark:\"}" ${{ secrets.SLACK_WEBHOOK }}
 
+      - name: Read Trivy report content
+        id: read_report
+        run: |
+          CONTENT=$(cat trivy_report_${{env.TIMESTAMP}}.json | jq -Rs .)
+          echo "CONTENT=${CONTENT}" >> $GITHUB_ENV
+
       - name: Send Slack Message - Uploading Report to Slack
         id: send_slack_message
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-          SLACK_CHANNEL: "#your-channel-name"
-          SLACK_TITLE: "Trivy Report ${TIMESTAMP}"
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: experiments
+          SLACK_TITLE: "Trivy Report--${{env.TIMESTAMP}}"
         run: |
           TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
           # Check if file exists before uploading
@@ -71,14 +78,19 @@ jobs:
             curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Uploading Trivy Report to Slack :file_upload:\", \"channel\":\"${SLACK_CHANNEL}\"}" -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/chat.postMessage
 
             # Get upload URL
-            UPLOAD_URL=$(curl -s -X POST -F "file=@${TRIVY_OUTPUT}" -F "filename=${TRIVY_OUTPUT}" -F "title=${SLACK_TITLE}" -F channels=${SLACK_CHANNEL} -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/files.getUploadURLExternal | jq -r '.upload_url')
-
-            cat $UPLOAD_URL
+            UPLOAD_URL=$(curl -s -X POST -H "Authorization: Bearer ${SLACK_TOKEN}" -H "Content-Type: application/json" --data "{\"filename\": \"${TRIVY_OUTPUT}\", \"title\": \"${SLACK_TITLE}\", \"channels\": \"${SLACK_CHANNEL}\"}" https://slack.com/api/files.getUploadURLExternal | jq -r '.upload_url')
 
             # Upload file
-            UPLOAD_RESPONSE=$(curl -s -X POST -F "file=@${TRIVY_OUTPUT}" -F "filename=${TRIVY_OUTPUT}" -F "title=${SLACK_TITLE}" -F channels=${SLACK_CHANNEL} "${UPLOAD_URL}")
-
-            # Check if upload was successful
+            if [ -n "$UPLOAD_URL" ]; then
+              curl -s -X POST -F "file=@${TRIVY_OUTPUT}" "${UPLOAD_URL}"
+            else
+              echo "Failed to get upload URL from Slack."
+              exit 1
+            fi
+          else
+            echo "File ${TRIVY_OUTPUT} does not exist."
+            exit 1
+          fi
 
       - name: Cleanup
         if: always()
