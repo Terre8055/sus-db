@@ -64,13 +64,15 @@ jobs:
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           SLACK_CHANNEL: "#experiments"
-          TRIVY_OUTPUT: "trivy_report_${TIMESTAMP}.json"
+          
         run: |
-          # Read the content of the Triv
+          TIMESTAMP=$(date +%Y%m%d)
+          TRIVY_OUTPUT: "trivy_report_${TIMESTAMP}.json"
+          
           REPORT_CONTENT=$(cat ${TRIVY_OUTPUT})
 
-          # Send the report content as a message to Slack
           curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Trivy Report Content:\n\`\`\`${REPORT_CONTENT}\`\`\`\", \"channel\":\"${SLACK_CHANNEL}\"}" -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/chat.postMessage
+
       - name: Cleanup
         if: always()
         run: |
