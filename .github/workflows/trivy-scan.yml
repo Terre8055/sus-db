@@ -20,8 +20,9 @@ jobs:
 
       - name: Install Trivy
         run: |
-          wget https://github.com/aquasecurity/trivy/releases/download/v0.18.3/trivy_0.18.3_Linux-64bit.deb
-          sudo dpkg -i trivy_0.18.3_Linux-64bit.deb
+         
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.52.1
+
 
 
       - name: Configure AWS credentials
