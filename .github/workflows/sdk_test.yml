@@ -57,7 +57,9 @@ jobs:
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           SLACK_CHANNEL: experiments  # Update with your Slack channel
-          TIMESTAMP: ${{ format('{0:yyyyMMdd}', github.run_number) }}
+          
+          TIMESTAMP: ${{ format('{0:yyyy-MM-dd}', github.run_number) }}
+
         run: |
           python upload_to_slack.py
 
