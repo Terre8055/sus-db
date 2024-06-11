@@ -50,35 +50,35 @@ jobs:
           TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
           aws s3 cp ${TRIVY_OUTPUT} s3://github-actions-s3-v1/trivy_reports/${TRIVY_OUTPUT}
 
-      - name: Read Trivy report content
-        id: read_report
-        run: |
-          CONTENT=$(cat trivy_report_${{ env.TIMESTAMP }}.json | jq -Rs .)
-          echo "CONTENT=${CONTENT}" >> $GITHUB_ENV
 
-      - name: Slack Notification
-        uses: rtCamp/action-slack-notify@v2
+      - name: Send Slack Message - Report Uploaded
         env:
-          #SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-          SLACK_CHANNEL: experiments
-          SLACK_CUSTOM_PAYLOAD: '{
-            "text": "Trivy Report Upload",
-            "attachments": [
-              {
-                "title": "Trivy Report for ${{ env.TIMESTAMP }}",
-                "text": ${{ env.CONTENT }},
-                "color": "${{ job.status }}",
-                "fields": [
-                  {
-                    "title": "S3 Location",
-                    "value": "s3://github-actions-s3-v1/trivy_reports/trivy_report_${{ env.TIMESTAMP }}.json"
-                  }
-                ]
-              }
-            ]
-          }'
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Trivy Report uploaded to S3 :white_check_mark:\"}" ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Send Slack Message - Uploading Report to Slack
+        id: send_slack_message
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          SLACK_CHANNEL: "#your-channel-name"
+          SLACK_TITLE: "Trivy Report ${TIMESTAMP}"
+        run: |
+          TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
+          # Check if file exists before uploading
+          if [ -f "${TRIVY_OUTPUT}" ]; then
+            # Initial message
+            curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Uploading Trivy Report to Slack :file_upload:\", \"channel\":\"${SLACK_CHANNEL}\"}" -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/chat.postMessage
+
+            # Get upload URL
+            UPLOAD_URL=$(curl -s -X POST -F "file=@${TRIVY_OUTPUT}" -F "filename=${TRIVY_OUTPUT}" -F "title=${SLACK_TITLE}" -F channels=${SLACK_CHANNEL} -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/files.getUploadURLExternal | jq -r '.upload_url')
+
+            cat $UPLOAD_URL
+
+            # Upload file
+            UPLOAD_RESPONSE=$(curl -s -X POST -F "file=@${TRIVY_OUTPUT}" -F "filename=${TRIVY_OUTPUT}" -F "title=${SLACK_TITLE}" -F channels=${SLACK_CHANNEL} "${UPLOAD_URL}")
+
+            # Check if upload was successful
 
       - name: Cleanup
         if: always()
