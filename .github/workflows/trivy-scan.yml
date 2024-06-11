@@ -1,4 +1,4 @@
-name: Trivy Scan
+name: AWS Trivy Scan
 
 on:
   push:
@@ -6,29 +6,34 @@ on:
       - develop
 
 permissions:
-      id-token: write   # This is required for requesting the JWT
-      contents: read
+  contents: write
+
 jobs:
-  trivy-scan:
-    runs-on: ubuntu-latest
-    
+  scan:
+    name: AWS Scan
+    runs-on: ubuntu-20.04
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Install Trivy
         run: |
-          wget https://github.com/aquasecurity/trivy/releases/download/v0.18.3/trivy_0.18.3_Linux-64bit.deb
-          sudo dpkg -i trivy_0.18.3_Linux-64bit.deb
+          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.44.0_Linux-64bit.tar.gz
+          tar zxvf trivy_0.44.0_Linux-64bit.tar.gz
+          sudo mv trivy /usr/local/bin/
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.SECRET_KEY }}
           aws-region: us-east-1
 
-
-      - name: Run Trivy scan
-        run: trivy aws --region us-east-1 --service ec2 --compliance aws-cis-1.2 
+      - name: Run Trivy vulnerability scanner
+        run: trivy aws --region us-east-1 --service ec2 --compliance aws-cis-1.2 --format json --exit-code 1 --severity MEDIUM
+        env:
+          AWS_DEFAULT_REGION: us-east-1
+          AWS_REGION: us-east-1
+        continue-on-error: true
 
