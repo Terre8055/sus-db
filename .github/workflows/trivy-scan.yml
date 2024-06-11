@@ -78,7 +78,7 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
           SLACK_UPLOAD_URL=$(curl -s -F file=@${TRIVY_OUTPUT} -F channels=CHANNEL_ID -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/files.upload | jq -r '.file.url_private')
-          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Results uploaded to S3 for ${TRIVY_OUTPUT}\", \"attachments\": [{\"text\": \"Trivy scan results uploaded to Slack: ${SLACK_UPLOAD_URL}\", \"color\": \"#36a64f\"}]}" https://hooks.slack.com/services/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
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Results uploaded to S3 for ${TRIVY_OUTPUT}\", \"attachments\": [{\"text\": \"Trivy scan results uploaded to Slack: ${SLACK_UPLOAD_URL}\", \"color\": \"#36a64f\"}]}" ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Cleanup
         if: always()
