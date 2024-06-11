@@ -48,25 +48,17 @@ jobs:
           aws s3 cp ${TRIVY_OUTPUT} s3://github-actions-s3-v1/trivy_reports/${TRIVY_OUTPUT}
 
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-
-      - name: Install dependencies
+      - name: Run Trivy and save report
+        id: run_trivy
         run: |
-          python -m pip install --upgrade pip
-          pip install slack_sdk
+          trivy aws --region us-east-1 --format table > trivy_report.txt
+          echo "TRIVY_REPORT_PATH=trivy_report${{env.TIMESTAMP}}.txt" >> $GITHUB_ENV
 
-      - name: Upload Trivy report to Slack
-        env:
-          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-          SLACK_CHANNEL: experiments  # Update with your Slack channel
-          
-          TIMESTAMP: ${{ format('{0:yyyyMMdd}', github.run_number) }}
-
+      - name: Slack Notification
         run: |
-          python upload_to_slack.py
+          pip3 install slack_sdk
+          python3 ${{ github.workspace }}/slackmessenger.py
+
 
       - name: Cleanup
         if: always()
