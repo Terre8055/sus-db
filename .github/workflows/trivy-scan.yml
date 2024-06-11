@@ -50,26 +50,35 @@ jobs:
           TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
           aws s3 cp ${TRIVY_OUTPUT} s3://github-actions-s3-v1/trivy_reports/${TRIVY_OUTPUT}
 
-      - name: Send Slack Message - Report Uploaded
-        env:
-          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+      - name: Read Trivy report content
+        id: read_report
         run: |
-          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Trivy Report uploaded to S3 :white_check_mark:\"}" ${{ secrets.SLACK_WEBHOOK }}
-          touch file.txt #placeholder
+          CONTENT=$(cat trivy_report_${{ env.TIMESTAMP }}.json | jq -Rs .)
+          echo "CONTENT=${CONTENT}" >> $GITHUB_ENV
 
       - name: Slack Notification
         uses: rtCamp/action-slack-notify@v2
         env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           SLACK_CHANNEL: experiments
-          SLACK_COLOR: ${{ job.status }}
-          SLACK_ICON: https://github.com/rtCamp.png?size=48
-          SLACK_MESSAGE: "Trivy Report Upload"
-          SLACK_TITLE: "Post Title"
-          SLACK_USERNAME: trivy_success
-          SLACK_FILE_UPLOAD: file.txt
-          SLACK_FOOTER: "RGT Operations"
+          SLACK_CUSTOM_PAYLOAD: '{
+            "text": "Trivy Report Upload",
+            "attachments": [
+              {
+                "title": "Trivy Report for ${{ env.TIMESTAMP }}",
+                "text": ${{ env.CONTENT }},
+                "color": "${{ job.status }}",
+                "fields": [
+                  {
+                    "title": "S3 Location",
+                    "value": "s3://github-actions-s3-v1/trivy_reports/trivy_report_${{ env.TIMESTAMP }}.json"
+                  }
+                ]
+              }
+            ]
+          }'
 
       - name: Cleanup
         if: always()
