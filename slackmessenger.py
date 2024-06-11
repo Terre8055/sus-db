@@ -6,8 +6,8 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG)
 # Initialize the Slack client
-client = WebClient(token=os.environ('SLACK_TOKEN'))
-timestamp = os.environ('TIMESTAMP')
+client = WebClient(token=os.environ["SLACK_TOKEN"])
+timestamp = os.environ["TIMESTAMP"]
 file_path = f"trivy_report_{timestamp}.json"
 
 try:
@@ -21,7 +21,7 @@ try:
     )
     file_url = new_file.get("file").get("permalink")
     new_message = client.chat_postMessage(
-        channel=os.environ('SLACK_CHANNEL_ID'),
+        channel=os.environ["SLACK_CHANNEL_ID"],
         text=f"Here is the file: {file_url}",
     )
     print("File uploaded and message sent successfully!")
