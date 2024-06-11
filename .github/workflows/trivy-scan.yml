@@ -62,39 +62,39 @@ jobs:
       - name: Send Slack Message - Uploading Report to Slack
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-          SLACK_CHANNEL: "#your-channel-name"
+          SLACK_CHANNEL: "#experiments"
           SLACK_TITLE: "Trivy Report ${TIMESTAMP}"
           SLACK_INITIAL_MESSAGE: "Uploading Trivy Report to Slack :file_upload:"
           SLACK_UPLOAD_MESSAGE: "Trivy Report uploaded to Slack :white_check_mark:"
         run: |
-          # Check if file exists before uploading
+          TIMESTAMP=$(date +%Y%m%d)
+          TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
+
+          ls -al
+          
           if [ -f "${TRIVY_OUTPUT}" ]; then
-            # Initial message
+            
             curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"${SLACK_INITIAL_MESSAGE}\", \"channel\":\"${SLACK_CHANNEL}\"}" -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/chat.postMessage
 
-            # Upload file
-            UPLOAD_RESPONSE=$(curl -F file=@${TRIVY_OUTPUT} -F "initial_comment=${SLACK_TITLE}" -F channels=${SLACK_CHANNEL} -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/files.upload)
+            
+            UPLOAD_RESPONSE=$(curl -F file=@${TRIVY_OUTPUT} -F "initial_comment=TRIVY REPORT-${TIMESTAMP}" -F channels=${SLACK_CHANNEL} -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/files.upload)
 
-            # Check if upload was successful
+            
             if [[ $(echo ${UPLOAD_RESPONSE} | jq -r '.ok') == "true" ]]; then
               curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"${SLACK_UPLOAD_MESSAGE}\", \"channel\":\"${SLACK_CHANNEL}\"}" -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/chat.postMessage
-              echo "::set-output name=slack-upload-success::true"
             else
               echo "Failed to upload Trivy report to Slack: $(echo ${UPLOAD_RESPONSE} | jq -r '.error')"
-              echo "::set-output name=slack-upload-success::false"
               exit 1
             fi
           else
             echo "Trivy report file ${TRIVY_OUTPUT} not found."
-            echo "::set-output name=slack-upload-success::false"
             exit 1
           fi
 
       - name: Cleanup
-        if: ${{ always() && needs.scan.outputs.send_slack_message == 'true' && needs.scan.outputs.slack-upload-success != 'true' }}
+        if: always()
         run: |
           TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
           rm -f ${TRIVY_OUTPUT}
-      
 
