@@ -85,7 +85,7 @@ jobs:
         
           curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"${SLACK_INITIAL_MESSAGE}\", \"channel\":\"${SLACK_CHANNEL}\"}" ${{ secrets.SLACK_WEBHOOK_URL }}
 
-          # Upload file
+          
           UPLOAD_RESPONSE=$(curl -F file=@${TRIVY_OUTPUT} -F "initial_comment=${SLACK_TITLE}" -F channels=${SLACK_CHANNEL} -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/files.upload)
 
           
