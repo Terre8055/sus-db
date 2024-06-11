@@ -9,6 +9,9 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  TIMESTAMP: "$(date +'%Y%m%d')"
+
 jobs:
   scan:
     name: AWS Scan
@@ -38,14 +41,12 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         run: |
-          TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
           trivy aws --region us-east-1 --format json --output ${TRIVY_OUTPUT} --severity MEDIUM
           ls -l ${TRIVY_OUTPUT}
 
       - name: Upload Trivy report to S3
         run: |
-          TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
           aws s3 cp ${TRIVY_OUTPUT} s3://github-actions-s3-v1/trivy_reports/${TRIVY_OUTPUT}
 
@@ -60,9 +61,9 @@ jobs:
           export TIMESTAMP=$(date +%Y%m%d)
           echo "TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
           echo "Without github workspace"
-          cat trivy_report_${{env.TIMESTAMP}}.json
+          cat trivy_report_${TIMESTAMP}.json
           echo "with github workspace"
-          cat ${{ github.workspace }}trivy_report_${{env.TIMESTAMP}}.json
+          cat ${{ github.workspace }}trivy_report_${TIMESTAMP}.json
 
       - name: Slack Notification
         uses: rtCamp/action-slack-notify@v2
@@ -75,7 +76,7 @@ jobs:
           SLACK_MESSAGE: "Trivy Report Upload"
           SLACK_TITLE: "Post Title"
           SLACK_USERNAME: trivy_success
-          SLACK_FILE_UPLOAD: "${{ github.workspace }}/trivy_report_${{ env.TIMESTAMP }}.json"
+          SLACK_FILE_UPLOAD: "${{ github.workspace }}/trivy_report_${TIMESTAMP}.json"
           SLACK_FOOTER: "RGT Operations"
 
       - name: Cleanup
