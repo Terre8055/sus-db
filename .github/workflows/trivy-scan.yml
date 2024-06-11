@@ -9,6 +9,8 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  GIT_SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
 jobs:
   scan:
     name: AWS Scan
@@ -24,7 +26,9 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up date environment variable
-        run: echo "TIMESTAMP=$(date +%Y%m%d)" >> $GITHUB_ENV
+        run: |
+          echo "TIMESTAMP=$(date +%Y%m%d)" >> $GITHUB_ENV
+          echo "SLACK_TOKEN=${GIT_SLACK_TOKEN}" >> $GITHUB_ENV
 
       - name: Install Trivy
         run: |
@@ -57,7 +61,8 @@ jobs:
       - name: Slack Notification
         run: |
           pip3 install slack_sdk
-          echo "SLACK_TOKEN=${{ secrets.SLACK_TOKEN }}" >> $GITHUB_ENV
+
+          echo "TIMESTAMP=$(date +%Y%m%d)" >> $GITHUB_ENV
           python3 ${{ github.workspace }}/slackmessenger.py
 
 
