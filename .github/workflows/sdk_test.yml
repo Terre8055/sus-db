@@ -1,0 +1,70 @@
+name: AWS Trivy Scan
+
+on:
+  push:
+    branches:
+      - develop
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  scan:
+    name: AWS Scan
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Send Slack Message - Generating Report
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Generating Trivy Report :robot_face:\"}" ${{ secrets.SLACK_WEBHOOK}}
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up date environment variable
+        run: echo "TIMESTAMP=$(date +%Y%m%d)" >> $GITHUB_ENV
+
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.52.1
+          sudo apt-get update && sudo apt-get install -y jq
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1.7.0
+        with:
+          role-to-assume: arn:aws:iam::590183661216:role/GitHubAction-AssumeRoleWithAction
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: us-east-1
+
+      - name: Run Trivy vulnerability scanner
+        run: |
+          TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
+          trivy aws --region us-east-1 --format json --output ${TRIVY_OUTPUT} --severity MEDIUM
+          ls -l ${TRIVY_OUTPUT}
+      - name: Upload Trivy report to S3
+        run: |
+          TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
+          aws s3 cp ${TRIVY_OUTPUT} s3://github-actions-s3-v1/trivy_reports/${TRIVY_OUTPUT}
+
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install slack_sdk
+
+      - name: Upload Trivy report to Slack
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          SLACK_CHANNEL: experiments  # Update with your Slack channel
+          TIMESTAMP: ${{ format('{0:yyyyMMdd}', github.run_number) }}
+        run: |
+          python upload_to_slack.py
+
+
+      - name: Cleanup
+        if: always()
+        run: |
+          TIMESTAMP=$(date +%Y%m%d)
+          TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
+          rm -f ${TRIVY_OUTPUT}
