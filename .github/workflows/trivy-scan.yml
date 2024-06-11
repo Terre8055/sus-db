@@ -3,7 +3,7 @@ name: AWS Trivy Scan
 on:
   push:
     branches:
-      - develop/yoofi
+      - yoofidevelop
 
 permissions:
   id-token: write
