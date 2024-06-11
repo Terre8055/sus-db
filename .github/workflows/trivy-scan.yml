@@ -51,7 +51,7 @@ jobs:
       - name: Read Trivy report content
         id: read_report
         run: |
-          CONTENT=$(trivy aws --region us-east-1 --format table)
+          CONTENT=$(trivy aws --region us-east-1)
           echo "CONTENT=${CONTENT}" >> $GITHUB_ENV
 
 
@@ -66,7 +66,7 @@ jobs:
             "attachments": [
               {
                 "title": "Trivy Report for ${{ env.TIMESTAMP }}",
-                "text": ${{ env.CONTENT }},
+                "text": ${{ env.CONTENT }}
                 ]
               }
             ]
