@@ -47,10 +47,16 @@ jobs:
           TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
           aws s3 cp ${TRIVY_OUTPUT} s3://github-actions-s3-v1/trivy_reports/${TRIVY_OUTPUT}
 
+      - name: Run Trivy and save report
+        id: run_trivy
+        run: |
+          trivy aws --region us-east-1 --format table > trivy_report.txt
+          echo "TRIVY_REPORT_PATH=trivy_report.txt" >> $GITHUB_ENV
+
       - name: Read Trivy report content
         id: read_report
         run: |
-          CONTENT=$(trivy aws --region us-east-1)
+          CONTENT=$(cat $TRIVY_REPORT_PATH)
           echo "CONTENT=${CONTENT}" >> $GITHUB_ENV
 
       - name: Slack Notification
