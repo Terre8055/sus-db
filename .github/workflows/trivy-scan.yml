@@ -47,30 +47,16 @@ jobs:
           TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
           aws s3 cp ${TRIVY_OUTPUT} s3://github-actions-s3-v1/trivy_reports/${TRIVY_OUTPUT}
 
-
       - name: Read Trivy report content
         id: read_report
         run: |
           CONTENT=$(trivy aws --region us-east-1)
           echo "CONTENT=${CONTENT}" >> $GITHUB_ENV
 
-
       - name: Slack Notification
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-          SLACK_CHANNEL: experiments
-          SLACK_CUSTOM_PAYLOAD: '{
-            "text": "Trivy Report Upload",
-            "attachments": [
-              {
-                "title": "Trivy Report for ${{ env.TIMESTAMP }}",
-                "text": ${{ env.CONTENT }}
-                ]
-              }
-            ]
-          }'
+        run: |
+          pip3 install slack_sdk
+          python3 slackmessaenger.py
 
       - name: Cleanup
         if: always()
