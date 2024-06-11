@@ -57,6 +57,7 @@ jobs:
       - name: Slack Notification
         run: |
           pip3 install slack_sdk
+          echo "SLACK_TOKEN=${{ secrets.SLACK_TOKEN }}" >> $GITHUB_ENV
           python3 ${{ github.workspace }}/slackmessenger.py
 
 
