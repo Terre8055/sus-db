@@ -77,7 +77,7 @@ jobs:
             curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"${SLACK_INITIAL_MESSAGE}\", \"channel\":\"${SLACK_CHANNEL}\"}" -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/chat.postMessage
 
             
-            UPLOAD_URL=$(curl -s -X POST -F "file=@${TRIVY_OUTPUT}" -F "filename=${TRIVY_OUTPUT}" -F "title=${SLACK_TITLE}" -F channels=${SLACK_CHANNEL} -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/files.getUploadURLExternal | jq -r '.file.url_private')
+            UPLOAD_URL=$(curl -s -X POST -F "file=@${TRIVY_OUTPUT}" -F "filename=${TRIVY_OUTPUT}" -F "title=${SLACK_TITLE}" -F channels=${SLACK_CHANNEL} -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/files.getUploadURLExternal | jq -r '.upload_url')
 
             
             UPLOAD_RESPONSE=$(curl -s -X POST -F "file=@${TRIVY_OUTPUT}" -F "filename=${TRIVY_OUTPUT}" -F "title=${SLACK_TITLE}" -F channels=${SLACK_CHANNEL} "${UPLOAD_URL}")
