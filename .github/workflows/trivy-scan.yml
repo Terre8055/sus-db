@@ -75,10 +75,7 @@ jobs:
           
           if [ -f "${TRIVY_OUTPUT}" ]; then
             
-            curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Uploading Trivy Report to Slack :file_upload:\", \"channel\":\"${SLACK_CHANNEL}\"}" -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/chat.postMessage
-
-          
-            UPLOAD_RESPONSE=$(curl -s -X POST -H "Authorization: Bearer ${SLACK_TOKEN}" -H "Content-Type: application/x-www-form-urlencoded" --data "{\"files\":[{\"filename\":\"${TRIVY_OUTPUT}\",\"title\":\"${SLACK_TITLE}\",\"channels\":[\"${SLACK_CHANNEL}\"]}]}" https://slack.com/api/files.getUploadURLExternal)
+            UPLOAD_RESPONSE=$(curl -s -X POST -H "Authorization: Bearer ${SLACK_TOKEN}" -H "Content-Type: application/json" --data "{\"files\":[{\"filename\":\"${TRIVY_OUTPUT}\",\"title\":\"${SLACK_TITLE}\",\"channels\":[\"${SLACK_CHANNEL}\"]}]}" https://slack.com/api/files.getUploadURLExternal)
             echo $UPLOAD_RESPONSE
             UPLOAD_URL=$(echo $UPLOAD_RESPONSE | jq -r '.files[0].upload_url')
             echo $UPLOAD_URL
