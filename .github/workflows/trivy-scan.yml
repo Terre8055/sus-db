@@ -1,5 +1,7 @@
 
 
+
+
 name: AWS Trivy Scan
 
 on:
@@ -17,6 +19,12 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
+      - name: Send Slack Message - Generating Report
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Generating Trivy Report :robot_face:\"}" ${{ secrets.SLACK_WEBHOOK_URL }}
+
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -24,6 +32,12 @@ jobs:
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.52.1
           sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Send Slack Message - Running Trivy Scanner
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Running Trivy Scanner :hourglass_flowing_sand:\"}" ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1.7.0
@@ -36,8 +50,14 @@ jobs:
         run: |
           TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
-          trivy aws --region us-east-1 --format json --output ${TRIVY_OUTPUT} --severity MEDIUM
-          
+          trivy aws --region us-east-1 --compliance aws-cis-1.2 --format json --output ${TRIVY_OUTPUT} --exit-code 1 --severity MEDIUM
+          ls -l ${TRIVY_OUTPUT}
+
+      - name: Send Slack Message - Uploading Report to S3
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Uploading Trivy Report to S3 :cloud:\"}" ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Upload Trivy report to S3
         run: |
@@ -45,12 +65,11 @@ jobs:
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
           aws s3 cp ${TRIVY_OUTPUT} s3://github-actions-s3-v1/trivy_reports/${TRIVY_OUTPUT}
 
-      - name: Send results to Slack
+      - name: Send Slack Message - Report Uploaded
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
         run: |
-          TIMESTAMP=$(date +%Y%m%d)
-          TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
-          SLACK_WEBHOOK_URL=${{ secrets.SLACK_WEBHOOK_URL }}
-          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Results uploaded to S3 for ${TRIVY_OUTPUT}\"}" ${SLACK_WEBHOOK_URL}
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Trivy Report uploaded to S3 :white_check_mark:\"}" ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Cleanup
         if: always()
