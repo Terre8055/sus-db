@@ -77,6 +77,7 @@ jobs:
           SLACK_TITLE: "Post Title"
           SLACK_USERNAME: trivy_success
           SLACK_FILE_UPLOAD: "trivy_report_${{ env.TIMESTAMP }}.json"
+          SLACK_FOOTER: "RGT Operations"
 
       - name: Cleanup
         if: always()
