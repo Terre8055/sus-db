@@ -34,7 +34,8 @@ jobs:
         run: |
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
-          trivy aws --format json --output ${TRIVY_OUTPUT} --severity MEDIUM
+          trivy aws --region us-east-1 --format json --output ${TRIVY_OUTPUT} --severity MEDIUM
+          ls -al
 
       - name: Upload Trivy report to S3
         run: |
