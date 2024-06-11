@@ -33,11 +33,7 @@ jobs:
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.52.1
           sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Send Slack Message - Running Trivy Scanner
-        env:
-          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Running Trivy Scanner :hourglass_flowing_sand:\"}" ${{ secrets.SLACK_WEBHOOK_URL }}
+
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1.7.0
@@ -53,11 +49,7 @@ jobs:
           trivy aws --region us-east-1 --format json --output ${TRIVY_OUTPUT} --severity MEDIUM
           ls -l ${TRIVY_OUTPUT}
 
-      - name: Send Slack Message - Uploading Report to S3
-        env:
-          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Uploading Trivy Report to S3 :cloud:\"}" ${{ secrets.SLACK_WEBHOOK_URL }}
+
 
       - name: Upload Trivy report to S3
         run: |
@@ -77,7 +69,7 @@ jobs:
         run: |
           TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
-          SLACK_UPLOAD_URL=$(curl -s -F file=@${TRIVY_OUTPUT} -F channels=CHANNEL_ID -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/files.upload | jq -r '.file.url_private')
+          SLACK_UPLOAD_URL=curl -s -F file=@${TRIVY_OUTPUT} -F channels=CHANNEL_ID -H "Authorization: Bearer ${SLACK_TOKEN}" https://slack.com/api/files.upload
           curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Results uploaded to S3 for ${TRIVY_OUTPUT}\", \"attachments\": [{\"text\": \"Trivy scan results uploaded to Slack: ${SLACK_UPLOAD_URL}\", \"color\": \"#36a64f\"}]}" ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Cleanup
