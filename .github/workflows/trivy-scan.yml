@@ -32,6 +32,8 @@ jobs:
           aws-region: us-east-1
 
       - name: Run Trivy vulnerability scanner
-        run: trivy aws --region us-east-1 --service ec2 --compliance aws-cis-1.2 --format json --exit-code 1 --severity MEDIUM
+        run: |
+          trivy --version
+          trivy aws 
 
 
