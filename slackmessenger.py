@@ -21,7 +21,7 @@ try:
     )
     file_url = new_file.get("file").get("permalink")
     new_message = client.chat_postMessage(
-        channel=os.environ["SLACK_CHANNEL_ID"],
+        channel="C076CEFAXJ5",
         text=f"Here is the file: {file_url}",
     )
     print("File uploaded and message sent successfully!")
