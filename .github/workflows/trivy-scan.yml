@@ -61,27 +61,21 @@ jobs:
 
      
       - name: Set up environment variables
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_CHANNEL: general
-          SLACK_COLOR: ${{ job.status }}
-          SLACK_ICON: https://github.com/rtCamp.png?size=48
-          SLACK_TITLE: "Trivy Report"
-          SLACK_USERNAME: trivy_success
         run: |
           export TIMESTAMP=$(date +%Y%m%d)
           echo "TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
 
-      - name: Slack Notification for File Upload
+      - name: Slack Notification
         uses: rtCamp/action-slack-notify@v2
-        with:
-          slack_webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          slack_channel: ${{ env.SLACK_CHANNEL }}
-          slack_color: ${{ env.SLACK_COLOR }}
-          slack_icon: ${{ env.SLACK_ICON }}
-          slack_message: ${{ env.SLACK_TITLE }} Upload for ${TIMESTAMP}
-          slack_username: ${{ env.SLACK_USERNAME }}
-          slack_file_upload: "trivy_report_${TIMESTAMP}.json"
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: experiments
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_ICON: https://github.com/rtCamp.png?size=48
+          SLACK_MESSAGE: "Trivy Report Upload"
+          SLACK_TITLE: "Post Title"
+          SLACK_USERNAME: trivy_success
+          SLACK_FILE_UPLOAD: "trivy_report_${TIMESTAMP}.json"
 
       - name: Cleanup
         if: always()
