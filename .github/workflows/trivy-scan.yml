@@ -23,8 +23,6 @@ jobs:
          
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.52.1
 
-
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1.7.0
         with:
@@ -34,7 +32,25 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         run: |
-          trivy --version
-          trivy aws 
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
+          trivy aws --region us-east-1 --compliance aws-cis-1.2 --format json --output ${TRIVY_OUTPUT} --exit-code 1 --severity MEDIUM
 
+      - name: Upload Trivy report to S3
+        run: |
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
+          aws s3 cp ${TRIVY_OUTPUT} s3://github-actions-s3-v1/trivy_reports/${TRIVY_OUTPUT}
 
+      - name: Send results to Slack
+        run: |
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
+          SLACK_MESSAGE=$(cat ${TRIVY_OUTPUT})
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Trivy scan results uploaded to S3:\", \"attachments\": [{\"title\": \"${TRIVY_OUTPUT}\", \"text\": \`${SLACK_MESSAGE}\`}]}" ${{ secrets.SLACK_WEBHOOK_URL }
+
+      - name: Cleanup
+        run: |
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
+          rm -f ${TRIVY_OUTPUT}
