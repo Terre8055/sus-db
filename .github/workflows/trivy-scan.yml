@@ -70,9 +70,8 @@ jobs:
       - name: Send Slack Message - Report Uploaded
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-          PRESIGNED_URL: ${{ env.PRESIGNED_URL }}
         run: |
-          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Detailed Report uploaded to s3 :white_check_mark:. View it [here](${PRESIGNED_URL})\"}" ${{ secrets.SLACK_WEBHOOK }}
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Detailed Report uploaded to s3 :white_check_mark:\"}" ${{ secrets.SLACK_WEBHOOK }}
 
       - name: Slack Notification
         run: |

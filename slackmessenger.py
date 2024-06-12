@@ -9,8 +9,11 @@ logging.basicConfig(level=logging.DEBUG)
 # Initialize the Slack client
 client = WebClient(token=os.environ["SLACK_TOKEN"])
 timestamp = os.environ["TIMESTAMP"]
+presigned_url = os.environ["PRESIGNED_URL"]
 file_path = f"trivy_report_table_{timestamp}.txt"
 
+
+shorten_presign_url = shorten(presigned_url)
 try:
     with open(file_path, "r") as file:
         file_content = file.read()
@@ -21,10 +24,11 @@ try:
         content=file_content,
     )
     file_url = new_file.get("file").get("permalink")
-    get_shorten_url = shorten(file_url)
+    
     new_message = client.chat_postMessage(
         channel="C076CEFAXJ5",
-        text=f"Here is the file: {get_shorten_url}",
+        text=f"Here is the file: {file_url} \
+        and the detailed report can be assigned at: {shorten_presign_url}",
     )
     print("File uploaded and message sent successfully!")
 except FileNotFoundError:
