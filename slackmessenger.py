@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.DEBUG)
 # Initialize the Slack client
 client = WebClient(token=os.environ["SLACK_TOKEN"])
 timestamp = os.environ["TIMESTAMP"]
-file_path = f"trivy_report_{timestamp}.json"
+file_path = f"trivy_report_table_{timestamp}.txt"
 
 try:
     with open(file_path, "r") as file:
