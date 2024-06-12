@@ -1,13 +1,20 @@
-import pyshorteners
 
-
+import requests
 
 def shorten(url):
-    #long_url = f"https://github-actions-s3-v1.s3.us-east-1.amazonaws.com/trivy_reports/trivy_report_20240612.json?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAYS2NP72QBLBSW6ZR%2F20240612%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20240612T102401Z&X-Amz-Expires=36000&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjENv%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLWVhc3QtMSJHMEUCIEumXCFqe1M2T00HxKlCyg0MnF5tUywsreAcyp8QuJftAiEA4JJA86g27SysGgN%2FJ2baArPalUlVfqjpICZWxvwG2Mcq8AMIdBAAGgw1OTAxODM2NjEyMTYiDEhIMz1nLkPxcz3x1irNA8mX%2FmLs8NdxKDiuBsBV2bON0X2a10EFTe1nlgy2GmZ2KyoQX8GdGoRhwhW%2FkB8ivTx6nmjOpJNTbjetdQX%2F3GIHPqKg9wPyCLClFfmRFU8rB2d%2Flzoxjso7cRUwCEJiYsm0VxS9ChpAClbibiXB7i4ThxLjMjg%2Bsuh9lYbRHQw8LbW0yfw3O4F5fxhv7AKsi0P59fFlELWgQFFTqDPvI3uUvM6ggvZM5Vc5biNmYmJGErcvrAdGjF14SXUuAL6Z8%2Buchv%2BnaMBTD37rd6uVmugur8H0v43TGVdl4P4VB%2FV3JuAkNa%2FLCnLpZo36pap9AjbPRLJ8kXsspJu6MMlBzL7oA0Jhe%2Fj%2Fn0s1pfyA%2BgUL2vmcaKfcinhsEnTc%2BtMYoAI8Fj9DesIxqcA%2F8z8LPvJ4%2FHb6Tuz5YUNQFhAAuvkgPYHSWm%2Bs%2BzMEyZgYyyl2%2BuTWh%2BvW2q0BH2zsOM6ImaQEMROwEN4kuZWeaidtiZXqUHKdhmAFPVe9loeNVuVcVP778M3vl3I2SY8Q%2F5bEBb0NBZKXXsgJ3WbIfIT7qFx1B7aLQ4f1ed7POsoj3Vi%2FkmZGOmlzxrzkxcTnjvhvBDK0XUEGJ3WeSY7N2YWhMLPupbMGOpQBXThY6a087MHPtzEEKMmmKXkodwfiD35Km6Ao6YlufobT%2F4ujavay0vTe2NHsNkFZtt82aeyJw7RC1xImGpM3W6uzXLzkAHSK7LP1q0HKCS%2FKE1E5AuYCp3DhQgij0Vt24G6Ti0BjUXFUf5qKlVh8Xhv%2BrwBHuoogfEpytUIT80jL0iwNG%2BkNlhItwq2XoEfDDf1t7A%3D%3D&X-Amz-Signature=ba5d0b5d5c15cfed09b0e2f86a646ffe2ff18e51e7788c44de8f59cedc7e5c46"
-    type_tiny = pyshorteners.Shortener()
-    short_url = type_tiny.tinyurl.short(url)
-    print(short_url)
-
+    api_url = "http://tinyurl.com/api-create.php"
+    params = {'url': url}
+    try:
+        response = requests.get(api_url, params=params, timeout=240)  # 2 minutes timeout
+        response.raise_for_status()
+        short_url = response.text
+        print(short_url)
+    except requests.exceptions.ReadTimeout:
+        print("The request timed out. Please try again later.")
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
 
 if __name__ == "__main__":
-    shorten(url)   
+    shorten(url)
+
+
