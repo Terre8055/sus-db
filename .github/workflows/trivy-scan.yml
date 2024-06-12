@@ -65,7 +65,7 @@ jobs:
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
         run: |
-          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Detailed Report uploaded to s3 :white_check_mark:\"}" ${{ secrets.SLACK_WEBHOOK_URL }}
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Detailed Report uploaded to s3 :white_check_mark:\"}" ${{ secrets.SLACK_WEBHOOK }}
 
       - name: Slack Notification
         run: |
