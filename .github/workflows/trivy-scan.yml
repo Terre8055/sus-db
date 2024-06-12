@@ -61,11 +61,18 @@ jobs:
           aws s3 cp ${TRIVY_OUTPUT} s3://github-actions-s3-v1/trivy_reports/${TRIVY_OUTPUT}
 
 
+      - name: Generate presigned URL
+        run: |
+          TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
+          PRESIGNED_URL=$(aws s3 presign s3://github-actions-s3-v1/trivy_reports/${TRIVY_OUTPUT} --expires-in 36000)
+          echo "PRESIGNED_URL=${PRESIGNED_URL}" >> $GITHUB_ENV
+
       - name: Send Slack Message - Report Uploaded
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          PRESIGNED_URL: ${{ env.PRESIGNED_URL }}
         run: |
-          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Detailed Report uploaded to s3 :white_check_mark:\"}" ${{ secrets.SLACK_WEBHOOK }}
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Detailed Report uploaded to s3 :white_check_mark:. View it [here](${PRESIGNED_URL})\"}" ${{ secrets.SLACK_WEBHOOK }}
 
       - name: Slack Notification
         run: |
