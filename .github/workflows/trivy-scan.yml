@@ -45,19 +45,16 @@ jobs:
         run: |
           TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
           TRIVY_OUTPUT_TABLE=trivy_report_table_${{env.TIMESTAMP}}.txt
-          trivy aws --region us-east-1 --format json --output ${TRIVY_OUTPUT} --severity MEDIUM
-          ls -l ${TRIVY_OUTPUT}
+          trivy aws --region us-east-1 --format json --output ${TRIVY_OUTPUT} --severity MEDIUM --update-cache
+          trivy aws --region us-east-1 --format table --output ${TRIVY_OUTPUT_TABLE} --severity MEDIUM --update-cache
+          ls -l
+
+
       - name: Upload Trivy report to S3
         run: |
           TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
           aws s3 cp ${TRIVY_OUTPUT} s3://github-actions-s3-v1/trivy_reports/${TRIVY_OUTPUT}
 
-
-      - name: Run Trivy and save report
-        id: run_trivy
-        run: |
-          trivy aws --region us-east-1 --format table --output trivy_report.txt
-          #echo "TRIVY_REPORT_PATH=trivy_report${{env.TIMESTAMP}}.txt" >> $GITHUB_ENV
 
       - name: Slack Notification
         run: |
