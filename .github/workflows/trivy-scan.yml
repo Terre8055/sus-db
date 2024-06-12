@@ -16,6 +16,8 @@ permissions:
 
 env:
   GIT_SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+  OIDC_ROLE: ${{ secrets.OIDC_ROLE }}
+
 jobs:
   scan:
     name: AWS Scan
@@ -42,7 +44,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1.7.0
         with:
-          role-to-assume: arn:aws:iam::590183661216:role/GitHubAction-AssumeRoleWithAction
+          role-to-assume: ${{ env.OIDC_ROLE }}
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: us-east-1
 
