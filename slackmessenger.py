@@ -27,8 +27,7 @@ try:
     
     new_message = client.chat_postMessage(
         channel="C076CEFAXJ5",
-        text=f"Here is the file: {file_url} \
-        and the detailed report can be assigned at: {shorten_presign_url}",
+        text=f"Here is the file: {file_url} and the detailed report can be accessed at: {shorten_presign_url}. Valid for 10 hours",
     )
     print("File uploaded and message sent successfully!")
 except FileNotFoundError:
