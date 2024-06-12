@@ -55,7 +55,7 @@ jobs:
       - name: Run Trivy and save report
         id: run_trivy
         run: |
-          trivy aws --region us-east-1 --format table > trivy_report.txt
+          trivy aws --region us-east-1 --format table --output trivy_report.txt
           #echo "TRIVY_REPORT_PATH=trivy_report${{env.TIMESTAMP}}.txt" >> $GITHUB_ENV
 
       - name: Slack Notification
