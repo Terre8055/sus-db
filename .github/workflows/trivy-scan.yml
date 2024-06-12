@@ -76,7 +76,7 @@ jobs:
 
       - name: Slack Notification
         run: |
-          pip3 install slack_sdk
+          pip3 install slack_sdk pyshorteners
           echo "TIMESTAMP=$(date +%Y%m%d)" >> $GITHUB_ENV
           python3 ${{ github.workspace }}/slackmessenger.py
 
