@@ -44,6 +44,7 @@ jobs:
       - name: Run Trivy vulnerability scanner
         run: |
           TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
+          TRIVY_OUTPUT_TABLE=trivy_report_table_${{env.TIMESTAMP}}.txt
           trivy aws --region us-east-1 --format json --output ${TRIVY_OUTPUT} --severity MEDIUM
           ls -l ${TRIVY_OUTPUT}
       - name: Upload Trivy report to S3
