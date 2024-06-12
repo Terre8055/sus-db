@@ -79,5 +79,5 @@ jobs:
         run: |
           TIMESTAMP=$(date +%Y%m%d)
           TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
-          TRIVY_OUTPUT_TABLE=trivy_report_table_${{TIMESTAMP}}.txt
+          TRIVY_OUTPUT_TABLE=trivy_report_table_${TIMESTAMP}.txt
           rm -f ${TRIVY_OUTPUT} ${TRIVY_OUTPUT_TABLE}
