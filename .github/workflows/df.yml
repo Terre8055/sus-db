@@ -40,53 +40,54 @@ jobs:
         id: extract-results
         run: |
           RESULTS=$(echo "${{ steps.deployment-frequency.outputs.markdown-file }}" | sed -n '/Results:/p')
-          echo "RESULTS=$RESULTS" >> $GITHUB_ENV
           echo $RESULTS
+    #       echo "RESULTS=$RESULTS" >> $GITHUB_ENV
+    #       echo $RESULTS
 
-      - name: Prepare Slack message
-        id: prepare-slack-message
-        run: |
-          JOB_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+    #   - name: Prepare Slack message
+    #     id: prepare-slack-message
+    #     run: |
+    #       JOB_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           
-          MESSAGE_JSON=$(jq -n --arg job_url "$JOB_URL" --arg results "$RESULTS" '{
-            "blocks": [
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "Getting metrics :bar_chart:"
-                }
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": $results
-                }
-              },
-              {
-                "type": "actions",
-                "elements": [
-                  {
-                    "type": "button",
-                    "text": {
-                      "type": "plain_text",
-                      "text": "View metric status",
-                      "emoji": true
-                    },
-                    "url": $job_url
-                  }
-                ]
-              }
-            ]
-          }')
-          echo "MESSAGE_JSON<<EOF" >> $GITHUB_ENV
-          echo "$MESSAGE_JSON" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+    #       MESSAGE_JSON=$(jq -n --arg job_url "$JOB_URL" --arg results "$RESULTS" '{
+    #         "blocks": [
+    #           {
+    #             "type": "section",
+    #             "text": {
+    #               "type": "mrkdwn",
+    #               "text": "Getting metrics :bar_chart:"
+    #             }
+    #           },
+    #           {
+    #             "type": "section",
+    #             "text": {
+    #               "type": "mrkdwn",
+    #               "text": $results
+    #             }
+    #           },
+    #           {
+    #             "type": "actions",
+    #             "elements": [
+    #               {
+    #                 "type": "button",
+    #                 "text": {
+    #                   "type": "plain_text",
+    #                   "text": "View metric status",
+    #                   "emoji": true
+    #                 },
+    #                 "url": $job_url
+    #               }
+    #             ]
+    #           }
+    #         ]
+    #       }')
+    #       echo "MESSAGE_JSON<<EOF" >> $GITHUB_ENV
+    #       echo "$MESSAGE_JSON" >> $GITHUB_ENV
+    #       echo "EOF" >> $GITHUB_ENV
 
-      - name: Send metrics report to Slack Channel 
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          MESSAGE_JSON: ${{ env.MESSAGE_JSON }}
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data "$MESSAGE_JSON" $SLACK_WEBHOOK
+    #   - name: Send metrics report to Slack Channel 
+    #     env:
+    #       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+    #       MESSAGE_JSON: ${{ env.MESSAGE_JSON }}
+    #     run: |
+    #       curl -X POST -H 'Content-type: application/json' --data "$MESSAGE_JSON" $SLACK_WEBHOOK
