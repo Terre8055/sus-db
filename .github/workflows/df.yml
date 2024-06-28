@@ -1,0 +1,27 @@
+name: Track deployment frequency
+
+on:
+  push:
+    branches:
+      - develop
+
+#   schedule:
+#     - cron: "*/2 * * * *" #test
+#     - cron: "0 0 * * 1" 
+#     - cron: "0 0 * * 5"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deployment-frequency:
+    name: Deployment frequency scan
+    runs-on: ubuntu-20.04
+
+    steps:
+    - name: Test this repo with GitHub Token
+      uses: DeveloperMetrics/deployment-frequency@main
+      with:
+          workflows: 'CI'
+          actions-token: "${{ secrets.GITHUB_TOKEN }}"
