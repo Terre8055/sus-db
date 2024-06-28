@@ -20,9 +20,17 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-    - name: Test this repo with GitHub Token
+    - name: Retrieve deployment frequency
       uses: DeveloperMetrics/deployment-frequency@main
       with:
-          workflows: 'AWS Trivy Scan'
-          actions-token: "${{ secrets.GITHUB_TOKEN }}"
-          default-branch: "develop"
+        workflows: 'AWS Trivy Scan'
+        actions-token: "${{ secrets.GITHUB_TOKEN }}"
+        default-branch: "develop"
+    
+
+    - name: Retrieve lead time to changes
+      uses: DeveloperMetrics/lead-time-for-changes@main
+      with:
+        workflows: 'AWS Trivy Scan'
+        actions-token: "${{ secrets.GITHUB_TOKEN }}"
+        default-branch: "develop"
