@@ -23,5 +23,5 @@ jobs:
     - name: Test this repo with GitHub Token
       uses: DeveloperMetrics/deployment-frequency@main
       with:
-          workflows: 'CI'
+          workflows: 'AWS Trivy Scan'
           actions-token: "${{ secrets.GITHUB_TOKEN }}"
