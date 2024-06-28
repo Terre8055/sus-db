@@ -47,12 +47,16 @@ jobs:
 
     - name: Read deployment frequency markdown
       id: read-markdown
-      run: echo "::set-output name=content::$(cat ${{ steps.deployment-frequency.outputs.markdown-file }})"
+      run: |
+        MARKDOWN_CONTENT=$(cat ${{ steps.deployment-frequency.outputs.markdown-file }})
+        echo "MARKDOWN_CONTENT<<EOF" >> $GITHUB_ENV
+        echo "$MARKDOWN_CONTENT" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
 
     - name: Send metrics report to Slack Channel 
       env:
         SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-        MARKDOWN_CONTENT: ${{ steps.read-markdown.outputs.content }}
+        MARKDOWN_CONTENT: ${{ env.MARKDOWN_CONTENT }}
       run: |
           cat $MARKDOWN_CONTENT
           curl -X POST -H 'Content-type: application/json' --data '{"text": "'"${MARKDOWN_CONTENT}"'"}' ${{ secrets.SLACK_WEBHOOK}}
