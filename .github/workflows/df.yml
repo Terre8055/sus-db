@@ -21,11 +21,6 @@ jobs:
         run: |
           curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Generating Deployment Metrics :bar_chart:\"}" $SLACK_WEBHOOK
 
-      - name: Install jq
-        run: |
-          sudo apt-get update
-          sudo apt-get install jq -y
-
       - name: Retrieve deployment frequency
         uses: DeveloperMetrics/deployment-frequency@main
         id: deployment-frequency
@@ -45,7 +40,11 @@ jobs:
         id: prepare-slack-message
         run: |
           JOB_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          MESSAGE_JSON=$(jq -n --arg job_url "$JOB_URL" '{
+          
+          # Extract deployment frequency results
+          RESULTS=$(echo "${{ steps.deployment-frequency.outputs.markdown-file }}" | sed -n '/Results:/,/Details:/p')
+          
+          MESSAGE_JSON=$(jq -n --arg job_url "$JOB_URL" --arg results "$RESULTS" '{
             "blocks": [
               {
                 "type": "section",
@@ -58,7 +57,7 @@ jobs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "Great to see you here! App helps you to stay up-to-date with your meetings and events right here within Slack. These are just a few things which you will be able to do:"
+                  "text": $results
                 }
               },
               {
