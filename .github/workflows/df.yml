@@ -31,6 +31,7 @@ jobs:
     
       - name: Retrieve lead time to changes
         uses: DeveloperMetrics/lead-time-for-changes@main
+        id: lead-time-to-change
         with:
           workflows: 'AWS Trivy Scan'
           actions-token: "${{ secrets.GITHUB_TOKEN }}"
@@ -39,28 +40,44 @@ jobs:
       - name: Extract deployment frequency results
         id: extract-results
         run: |
-          RESULTS=$(cat "${{ steps.deployment-frequency.outputs.markdown-file }}" | sed -n '/Results:/p' | sed 's/\*\*/\*/g')
-          echo "RESULTS=$RESULTS" >> $GITHUB_ENV
+          DEPLOYMENT_FREQUENCY_RESULTS=$(cat "${{ steps.deployment-frequency.outputs.markdown-file }}" | sed -n '/Results:/p' | sed 's/\*\*/\*/g')
+          LEAD_TIME_CHANGE_FREQUENCY=$(cat "${{ steps.lead-time-to-change.outputs.markdown-file }}" | sed -n '/Results:/p' | sed 's/\*\*/\*/g')
+          echo "DEPLOYMENT_FREQUENCY_RESULTS=$DEPLOYMENT_FREQUENCY_RESULTS" >> $GITHUB_ENV
+          echo "LEAD_TIME_CHANGE_FREQUENCY=$LEAD_TIME_CHANGE_FREQUENCY" >> $GITHUB_ENV
 
       - name: Prepare Slack message
         id: prepare-slack-message
         run: |
           JOB_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           
-          MESSAGE_JSON=$(jq -n --arg job_url "$JOB_URL" --arg results "$RESULTS" '{
+          MESSAGE_JSON=$(jq -n --arg job_url "$JOB_URL" --arg df "$DEPLOYMENT_FREQUENCY_RESULTS" --arg ltc "$LEAD_TIME_CHANGE_FREQUENCY" '{
             "blocks": [
               {
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "Getting metrics :bar_chart:"
+                  "text": "*Deployment Frequency*"
                 }
               },
               {
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": $results
+                  "text": $df
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Lead time for Changes*"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": $ltc
                 }
               },
               {
@@ -70,7 +87,7 @@ jobs:
                     "type": "button",
                     "text": {
                       "type": "plain_text",
-                      "text": "View metric status",
+                      "text": "View full report",
                       "emoji": true
                     },
                     "url": $job_url
