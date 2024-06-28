@@ -39,7 +39,7 @@ jobs:
       - name: Extract deployment frequency results
         id: extract-results
         run: |
-          RESULTS=$(cat "${{ steps.deployment-frequency.outputs.markdown-file }}" | sed -n '/Results:/p')
+          RESULTS=$(cat "${{ steps.deployment-frequency.outputs.markdown-file }}" | sed -n '/Results:/p' | sed 's/\*\*/\*/g')
           echo "RESULTS=$RESULTS" >> $GITHUB_ENV
 
       - name: Prepare Slack message
