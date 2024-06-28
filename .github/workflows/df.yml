@@ -39,7 +39,7 @@ jobs:
       - name: Extract deployment frequency results
         id: extract-results
         run: |
-          RESULTS=$(echo "${{ steps.deployment-frequency.outputs.markdown-file }}" | sed -n '/Results:/p')
+          RESULTS=$(cat "${{ steps.deployment-frequency.outputs.markdown-file }}" | sed -n '/Results:/p')
           echo $RESULTS
     #       echo "RESULTS=$RESULTS" >> $GITHUB_ENV
     #       echo $RESULTS
