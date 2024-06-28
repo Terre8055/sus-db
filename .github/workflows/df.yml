@@ -58,5 +58,5 @@ jobs:
         SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
         MARKDOWN_CONTENT: ${{ env.MARKDOWN_CONTENT }}
       run: |
-          cat $MARKDOWN_CONTENT
+          
           curl -X POST -H 'Content-type: application/json' --data '{"text": "'"${MARKDOWN_CONTENT}"'"}' ${{ secrets.SLACK_WEBHOOK}}
