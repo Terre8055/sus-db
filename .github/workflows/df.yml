@@ -36,13 +36,17 @@ jobs:
           actions-token: "${{ secrets.GITHUB_TOKEN }}"
           default-branch: "develop"
 
+      - name: Extract deployment frequency results
+        id: extract-results
+        run: |
+          RESULTS=$(echo "${{ steps.deployment-frequency.outputs.markdown-file }}" | sed -n '/Results:/p')
+          echo "RESULTS=$RESULTS" >> $GITHUB_ENV
+          echo $RESULTS
+
       - name: Prepare Slack message
         id: prepare-slack-message
         run: |
           JOB_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          
-          # Extract deployment frequency results
-          RESULTS=$(echo "${{ steps.deployment-frequency.outputs.markdown-file }}" | sed -n '/Results:/,/Details:/p')
           
           MESSAGE_JSON=$(jq -n --arg job_url "$JOB_URL" --arg results "$RESULTS" '{
             "blocks": [
