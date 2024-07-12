@@ -5,7 +5,7 @@ from typing import Optional
 from pydantic import FilePath
 from redis_om import EmbeddedJsonModel, JsonModel, Field, Migrator
 
-from settings import redis
+from src import redis
 from user_db_manager import UserDBManager
 
 
