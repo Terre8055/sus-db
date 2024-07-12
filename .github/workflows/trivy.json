@@ -1,0 +1,259 @@
+{
+  "CreatedAt": "2024-06-11T08:53:29.378415Z",
+  "ArtifactName": "590183661216",
+  "ArtifactType": "aws_account",
+  "Metadata": {
+    "ImageConfig": {
+      "architecture": "",
+      "created": "0001-01-01T00:00:00Z",
+      "os": "",
+      "rootfs": {
+        "type": "",
+        "diff_ids": null
+      },
+      "config": {}
+    }
+  },
+  "Results": [
+    {
+      "Target": "arn:aws:athena:us-east-1:590183661216:workgroup/primary",
+      "Class": "config",
+      "Type": "cloud"
+    },
+    {
+      "Target": "arn:aws:ec2:us-east-1:590183661216:network-acl/acl-0142b6ac89f265fd6",
+      "Class": "config",
+      "Type": "cloud"
+    },
+    {
+      "Target": "arn:aws:ec2:us-east-1:590183661216:network-acl/acl-063ef5c6be1b7798d",
+      "Class": "config",
+      "Type": "cloud"
+    },
+    {
+      "Target": "arn:aws:ec2:us-east-1:590183661216:security-group/sg-02ecaec46c03b5338",
+      "Class": "config",
+      "Type": "cloud"
+    },
+    {
+      "Target": "arn:aws:ec2:us-east-1:590183661216:security-group/sg-040c19a776b2f6adc",
+      "Class": "config",
+      "Type": "cloud"
+    },
+    {
+      "Target": "arn:aws:ec2:us-east-1:590183661216:security-group/sg-05d5a391250e978ce",
+      "Class": "config",
+      "Type": "cloud"
+    },
+    {
+      "Target": "arn:aws:ec2:us-east-1:590183661216:security-group/sg-0d9d627268ee92ab7",
+      "Class": "config",
+      "Type": "cloud"
+    },
+    {
+      "Target": "arn:aws:ec2:us-east-1:590183661216:volume/vol-0b7ae14cb69b046b6",
+      "Class": "config",
+      "Type": "cloud"
+    },
+    {
+      "Target": "arn:aws:ec2:us-east-1:590183661216:vpc/vpc-0e8ed2793a1eb45be",
+      "Class": "config",
+      "Type": "cloud",
+      "MisconfSummary": {
+        "Successes": 0,
+        "Failures": 1,
+        "Exceptions": 0
+      },
+      "Misconfigurations": [
+        {
+          "Type": "AWS",
+          "ID": "AVD-AWS-0178",
+          "AVDID": "AVD-AWS-0178",
+          "Title": "VPC Flow Logs is a feature that enables you to capture information about the IP traffic going to and from network interfaces in your VPC. After you've created a flow log, you can view and retrieve its data in Amazon CloudWatch Logs. It is recommended that VPC Flow Logs be enabled for packet \"Rejects\" for VPCs.",
+          "Description": "VPC Flow Logs provide visibility into network traffic that traverses the VPC and can be used to detect anomalous traffic or insight during security workflows.",
+          "Message": "VPC Flow Logs is not enabled for VPC vpc-0e8ed2793a1eb45be",
+          "Resolution": "Enable flow logs for VPC",
+          "Severity": "MEDIUM",
+          "PrimaryURL": "https://avd.aquasec.com/misconfig/avd-aws-0178",
+          "References": [
+            "https://avd.aquasec.com/misconfig/avd-aws-0178"
+          ],
+          "Status": "FAIL",
+          "Layer": {},
+          "CauseMetadata": {
+            "Resource": "arn:aws:ec2:us-east-1:590183661216:vpc/vpc-0e8ed2793a1eb45be",
+            "Provider": "aws",
+            "Service": "ec2",
+            "Code": {
+              "Lines": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "Target": "arn:aws:ec2:us-east-1:590183661216:vpc/vpc-0ebc856b660644368",
+      "Class": "config",
+      "Type": "cloud",
+      "MisconfSummary": {
+        "Successes": 0,
+        "Failures": 1,
+        "Exceptions": 0
+      },
+      "Misconfigurations": [
+        {
+          "Type": "AWS",
+          "ID": "AVD-AWS-0178",
+          "AVDID": "AVD-AWS-0178",
+          "Title": "VPC Flow Logs is a feature that enables you to capture information about the IP traffic going to and from network interfaces in your VPC. After you've created a flow log, you can view and retrieve its data in Amazon CloudWatch Logs. It is recommended that VPC Flow Logs be enabled for packet \"Rejects\" for VPCs.",
+          "Description": "VPC Flow Logs provide visibility into network traffic that traverses the VPC and can be used to detect anomalous traffic or insight during security workflows.",
+          "Message": "VPC Flow Logs is not enabled for VPC vpc-0ebc856b660644368",
+          "Resolution": "Enable flow logs for VPC",
+          "Severity": "MEDIUM",
+          "PrimaryURL": "https://avd.aquasec.com/misconfig/avd-aws-0178",
+          "References": [
+            "https://avd.aquasec.com/misconfig/avd-aws-0178"
+          ],
+          "Status": "FAIL",
+          "Layer": {},
+          "CauseMetadata": {
+            "Resource": "arn:aws:ec2:us-east-1:590183661216:vpc/vpc-0ebc856b660644368",
+            "Provider": "aws",
+            "Service": "ec2",
+            "Code": {
+              "Lines": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "Target": "arn:aws:iam::590183661216:group/devops",
+      "Class": "config",
+      "Type": "cloud",
+      "MisconfSummary": {
+        "Successes": 0,
+        "Failures": 1,
+        "Exceptions": 0
+      },
+      "Misconfigurations": [
+        {
+          "Type": "AWS",
+          "ID": "AVD-AWS-0123",
+          "AVDID": "AVD-AWS-0123",
+          "Title": "IAM groups should have MFA enforcement activated.",
+          "Description": "IAM groups should be protected with multi factor authentication to add safe guards to password compromise.",
+          "Message": "Multi-Factor authentication is not enforced for group",
+          "Resolution": "Use terraform-module/enforce-mfa/aws to ensure that MFA is enforced",
+          "Severity": "MEDIUM",
+          "PrimaryURL": "https://avd.aquasec.com/misconfig/avd-aws-0123",
+          "References": [
+            "https://avd.aquasec.com/misconfig/avd-aws-0123"
+          ],
+          "Status": "FAIL",
+          "Layer": {},
+          "CauseMetadata": {
+            "Resource": "arn:aws:iam::590183661216:group/devops",
+            "Provider": "aws",
+            "Service": "iam",
+            "Code": {
+              "Lines": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "Target": "arn:aws:iam::590183661216:user/appiah.micheal",
+      "Class": "config",
+      "Type": "cloud"
+    },
+    {
+      "Target": "arn:aws:kms:us-east-1:590183661216:key/47752826-d185-4ca3-af8d-8b18eff74358",
+      "Class": "config",
+      "Type": "cloud",
+      "MisconfSummary": {
+        "Successes": 0,
+        "Failures": 1,
+        "Exceptions": 0
+      },
+      "Misconfigurations": [
+        {
+          "Type": "AWS",
+          "ID": "AVD-AWS-0065",
+          "AVDID": "AVD-AWS-0065",
+          "Title": "A KMS key is not configured to auto-rotate.",
+          "Description": "You should configure your KMS keys to auto rotate to maintain security and defend against compromise.",
+          "Message": "Key does not have rotation enabled.",
+          "Resolution": "Configure KMS key to auto rotate",
+          "Severity": "MEDIUM",
+          "PrimaryURL": "https://avd.aquasec.com/misconfig/avd-aws-0065",
+          "References": [
+            "https://avd.aquasec.com/misconfig/avd-aws-0065"
+          ],
+          "Status": "FAIL",
+          "Layer": {},
+          "CauseMetadata": {
+            "Resource": "arn:aws:kms:us-east-1:590183661216:key/47752826-d185-4ca3-af8d-8b18eff74358",
+            "Provider": "aws",
+            "Service": "kms",
+            "Code": {
+              "Lines": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "Target": "arn:aws:logs:us-east-1:590183661216:log-group:/aws/lambda/humanoid_gpt:*",
+      "Class": "config",
+      "Type": "cloud"
+    },
+    {
+      "Target": "arn:aws:logs:us-east-1:590183661216:log-group:RDSOSMetrics:*",
+      "Class": "config",
+      "Type": "cloud"
+    },
+    {
+      "Target": "arn:aws:s3:::bumbyg-dev-serverlessdeploymentbucket-cfcztmspkfeq",
+      "Class": "config",
+      "Type": "cloud",
+      "MisconfSummary": {
+        "Successes": 0,
+        "Failures": 1,
+        "Exceptions": 0
+      },
+      "Misconfigurations": [
+        {
+          "Type": "AWS",
+          "ID": "AVD-AWS-0090",
+          "AVDID": "AVD-AWS-0090",
+          "Title": "S3 Data should be versioned",
+          "Description": "Versioning in Amazon S3 is a means of keeping multiple variants of an object in the same bucket. \nYou can use the S3 Versioning feature to preserve, retrieve, and restore every version of every object stored in your buckets. \nWith versioning you can recover more easily from both unintended user actions and application failures.",
+          "Message": "Bucket does not have versioning enabled",
+          "Resolution": "Enable versioning to protect against accidental/malicious removal or modification",
+          "Severity": "MEDIUM",
+          "PrimaryURL": "https://avd.aquasec.com/misconfig/avd-aws-0090",
+          "References": [
+            "https://avd.aquasec.com/misconfig/avd-aws-0090"
+          ],
+          "Status": "FAIL",
+          "Layer": {},
+          "CauseMetadata": {
+            "Resource": "arn:aws:s3:::bumbyg-dev-serverlessdeploymentbucket-cfcztmspkfeq",
+            "Provider": "aws",
+            "Service": "s3",
+            "Code": {
+              "Lines": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "Target": "arn:aws:s3:::github-actions-s3-v1",
+      "Class": "config",
+      "Type": "cloud"
+    }
+  ]
+}

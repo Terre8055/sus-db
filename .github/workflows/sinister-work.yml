@@ -1,0 +1,27 @@
+name: Upload File to S3
+
+on:
+  push:
+    branches:
+      - develop  # Trigger the workflow on push to the main branch
+permissions:
+      id-token: write   # This is required for requesting the JWT
+      contents: read
+jobs:
+  upload-to-s3:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1.7.0
+      with:
+        role-to-assume: arn:aws:iam::590183661216:role/GitHubAction-AssumeRoleWithAction
+        role-session-name: GitHub_to_AWS_via_FederatedOIDC
+        aws-region: us-east-1
+
+    - name: Upload file to S3
+      run: aws s3 cp ./welcome_script.sh s3://github-actions-s3-v1/welcome_script
+

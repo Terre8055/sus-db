@@ -1,0 +1,91 @@
+name: AWS Trivy Scan
+
+on:
+  push:
+    branches:
+      - develop
+
+  schedule:
+    - cron: "*/2 * * * *" #test
+    - cron: "0 0 * * 1" 
+    - cron: "0 0 * * 5"
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  GIT_SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+  OIDC_ROLE: ${{ secrets.OIDC_ROLE }}
+
+jobs:
+  scan:
+    name: AWS Scan
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Send Slack Message - Generating Report
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Generating Trivy Report :robot_face:\"}" ${{ secrets.SLACK_WEBHOOK}}
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up date environment variable
+        run: |
+          echo "TIMESTAMP=$(date +%Y%m%d)" >> $GITHUB_ENV
+          echo "SLACK_TOKEN=${GIT_SLACK_TOKEN}" >> $GITHUB_ENV
+
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.52.1
+          sudo apt-get update && sudo apt-get install -y jq
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1.7.0
+        with:
+          role-to-assume: ${{ env.OIDC_ROLE }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: us-east-1
+
+      - name: Run Trivy vulnerability scanner
+        run: |
+          TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
+          TRIVY_OUTPUT_TABLE=trivy_report_table_${{env.TIMESTAMP}}.txt
+          trivy aws --region us-east-1 --format json --output ${TRIVY_OUTPUT} --severity MEDIUM --update-cache
+          trivy aws --region us-east-1 --format table --output ${TRIVY_OUTPUT_TABLE} --severity MEDIUM --update-cache
+          ls -l
+
+
+      - name: Upload Trivy report to S3
+        run: |
+          TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
+          aws s3 cp ${TRIVY_OUTPUT} s3://github-actions-s3-v1/trivy_reports/${TRIVY_OUTPUT}
+
+
+      - name: Generate presigned URL
+        run: |
+          TRIVY_OUTPUT=trivy_report_${{env.TIMESTAMP}}.json
+          PRESIGNED_URL=$(aws s3 presign s3://github-actions-s3-v1/trivy_reports/${TRIVY_OUTPUT} --expires-in 36000)
+          echo "PRESIGNED_URL=${PRESIGNED_URL}" >> $GITHUB_ENV
+
+      - name: Send Slack Message - Report Uploaded
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Detailed Report uploaded to s3 :white_check_mark:\"}" ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Slack Notification
+        run: |
+          pip3 install slack_sdk pyshorteners
+          echo "TIMESTAMP=$(date +%Y%m%d)" >> $GITHUB_ENV
+          python3 ${{ github.workspace }}/slackmessenger.py
+
+
+      - name: Cleanup
+        if: always()
+        run: |
+          TIMESTAMP=$(date +%Y%m%d)
+          TRIVY_OUTPUT=trivy_report_${TIMESTAMP}.json
+          TRIVY_OUTPUT_TABLE=trivy_report_table_${TIMESTAMP}.txt
+          rm -f ${TRIVY_OUTPUT} ${TRIVY_OUTPUT_TABLE}
