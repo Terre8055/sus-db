@@ -18,7 +18,7 @@ import shortuuid
 from argon2 import PasswordHasher
 from dotenv import load_dotenv
 
-from settings import get_path
+from settings import get_log_path, get_path
 
 load_dotenv()
 

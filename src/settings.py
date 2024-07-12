@@ -16,8 +16,8 @@ get_log_path = os.getenv('LOG_PATH')
 # REDIS CLOUD CONN
 
 redis = get_redis_connection(
-    host=os.getenv('HOST'),
-    port=os.getenv('PORT'),
-    password=os.getenv('PASSWORD'),
+    host=os.getenv('REDIS_MASTER_HOST'),
+    port=os.getenv('REDIS_PORT_NUMBER'),
+    password=os.getenv('REDIS_PASSWORD'),
     decode_responses=True,
 )
