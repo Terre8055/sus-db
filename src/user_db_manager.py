@@ -10,7 +10,8 @@ import uuid
 from typing import (
     Dict,
     Union,
-    Optional
+    Optional,
+    
 )
 from logging.handlers import RotatingFileHandler
 import argon2
@@ -19,13 +20,27 @@ from argon2 import PasswordHasher
 from dotenv import load_dotenv
 
 from settings import get_log_path, get_path
+from user_path import UserPath
+
 
 load_dotenv()
+
+
+def setExternalSupport() -> bool: 
+    return False
+
+def setExternalLogPath(
+        url: Union[str, os.PathLike]) \
+            -> Union[str, os.PathLike]:
+    return url
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-log_path = get_log_path 
+log_path = get_log_path if not setExternalSupport() \
+    else setExternalLogPath()
+
 if log_path is not None:
     handler = RotatingFileHandler(
         log_path,
