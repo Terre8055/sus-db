@@ -23,6 +23,7 @@ from dotenv import load_dotenv
 
 from settings import get_log_path, get_path
 from user_path import UserPath
+from s3_logging_handler import S3LogHandler
 
 
 
@@ -35,6 +36,7 @@ logger.setLevel(logging.DEBUG)
 def setExternalSupport() -> bool:
     """Check if external site support is enabled"""
     return os.getenv("SSDB_EXTERNAL_SUPPORT", "False").lower() == "true"
+
 
 def setExternalLogPath(url: Union[str, os.PathLike]) -> Union[str, os.PathLike]:
     """Set the external file path
@@ -52,13 +54,22 @@ def setExternalFilePath(url: Union[str, os.PathLike]) -> Union[str, os.PathLike]
 
 # Initialize the external paths if external support is enabled
 external_support = setExternalSupport()
-log_path = setExternalLogPath() if external_support else get_log_path
-file_path_base = setExternalFilePath() if external_support else get_path
+log_path = setExternalLogPath("s3://bucket-name/logfileName") if external_support else get_log_path
 
-if log_path is not None:
-    handler = RotatingFileHandler(log_path, maxBytes=10240, backupCount=5)
+file_path_base = setExternalFilePath("s3://bucket-name/logfileName") if external_support else get_path
+
+if external_support:
+    bucket_name = log_path.split('/')[2]
+    key_name = '/'.join(log_path.split('/')[3:])
+    print(bucket_name, key_name)
+    handler = S3LogHandler(bucket_name, key_name)
 else:
-    raise TypeError('Bad log path expression given')
+    handler = RotatingFileHandler(log_path, maxBytes=10240, backupCount=5)
+
+# if log_path is not None:
+#     handler = RotatingFileHandler(log_path, maxBytes=10240, backupCount=5)
+# else:
+#     raise TypeError('Bad log path expression given')
 
 handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(message)s', '%m/%d/%Y %I:%M:%S %p')
