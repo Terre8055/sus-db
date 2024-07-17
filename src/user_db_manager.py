@@ -1,6 +1,7 @@
 """Module to store hashed user strings in database"""
 
 import base64
+import boto3
 import datetime
 import dbm
 import json
@@ -10,39 +11,69 @@ import uuid
 from typing import (
     Dict,
     Union,
-    Optional
+    Optional,
+    
 )
 from logging.handlers import RotatingFileHandler
+from botocore.exceptions import NoCredentialsError
 import argon2
 import shortuuid
 from argon2 import PasswordHasher
 from dotenv import load_dotenv
 
 from settings import get_log_path, get_path
+from user_path import UserPath
+from s3_logging_handler import S3LogHandler
+
+
 
 load_dotenv()
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-log_path = get_log_path 
-if log_path is not None:
-    handler = RotatingFileHandler(
-        log_path,
-        maxBytes=10240,
-        backupCount=5
-    )
+def setExternalSupport() -> bool:
+    """Check if external site support is enabled"""
+    return os.getenv("SSDB_EXTERNAL_SUPPORT", "False").lower() == "true"
+
+
+def setExternalLogPath(url: Union[str, os.PathLike]) -> Union[str, os.PathLike]:
+    """Set the external file path
+    eg: s3://bucket-name/logfileName
+    If s3, bucket name should be valid and exists already
+    """
+    return url
+
+def setExternalFilePath(url: Union[str, os.PathLike]) -> Union[str, os.PathLike]:
+    """Set the external file path
+    eg: s3://bucket-name/ 
+    If s3, bucket name should be valid and exists already
+    """
+    return url
+
+# Initialize the external paths if external support is enabled
+external_support = setExternalSupport()
+log_path = setExternalLogPath("s3://bucket-name/logfileName") if external_support else get_log_path
+
+file_path_base = setExternalFilePath("s3://bucket-name/logfileName") if external_support else get_path
+
+if external_support:
+    bucket_name = log_path.split('/')[2]
+    key_name = '/'.join(log_path.split('/')[3:])
+    print(bucket_name, key_name)
+    handler = S3LogHandler(bucket_name, key_name)
 else:
-    raise TypeError('Bad log path expression given')
+    handler = RotatingFileHandler(log_path, maxBytes=10240, backupCount=5)
+
+# if log_path is not None:
+#     handler = RotatingFileHandler(log_path, maxBytes=10240, backupCount=5)
+# else:
+#     raise TypeError('Bad log path expression given')
+
 handler.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter(
-    '%(asctime)s - %(message)s',
-    '%m/%d/%Y %I:%M:%S %p'
-)
+formatter = logging.Formatter('%(asctime)s - %(message)s', '%m/%d/%Y %I:%M:%S %p')
 handler.setFormatter(formatter)
-
-
 logger.addHandler(handler)
 
 
@@ -53,14 +84,11 @@ class UserDBManager:
     of hashed and secured user strings.
     """
     
-    def db_file_exists(self) -> bool:
-        """Check if a DBM file already exists with the given file path and name."""
-        return os.path.exists(self.get_file_path)
 
     def __init__(self, uid: Optional[str] = None) -> None:
         """Initialize the user storage instance
         with a unique identifier attached to file name."""
-        self.__get_path = os.path.expanduser(get_path) if get_path else ''
+        self.__get_path = file_path_base
         self.__unique_identifier = uid if uid else str(uuid.uuid4()) #Except for storing strings, always pass in the uid
         self.__file_name = f"user_db_{self.__unique_identifier}"
         self.__file_path = os.path.join(self.__get_path, self.__file_name)
@@ -87,19 +115,36 @@ class UserDBManager:
         """Retrieve store id"""
         return self.__unique_identifier
     
+
+    def db_file_exists(self) -> bool:
+        """Check if a DBM file already exists with the given file path and name."""
+        if external_support:
+            s3_client = boto3.client('s3')
+            bucket_name = self.__get_path.split('/')[2]  # Assuming 's3://bucket_name/' format
+            key_name = '/'.join(self.__file_path.split('/')[3:])
+            try:
+                s3_client.head_object(Bucket=bucket_name, Key=key_name)
+                return True
+            except NoCredentialsError:
+                logger.error("No AWS credentials found.")
+                return False
+            except s3_client.exceptions.ClientError:
+                return False
+        else:
+            return os.path.exists(self.__file_path)
+    
     def initialize_db(self) -> None:
-        """Initialize the user-specific database if it doesn't exist.
-        Ensure the directory exists or create it
-        Creates an empty file named 'user_db<uid>' inside the directory
-        """
-            
-        os.makedirs(self.__get_path, exist_ok=True)
-
-        with open(self.__file_path, 'w', encoding="utf-8"):
-            pass
-
-        self.__initialize_user_db()
-        logger.info("UserDBManager instance initialised.")
+        """Initialize the user-specific database if it doesn't exist."""
+        if external_support:
+            logger.info("External support enabled. Initializing database in S3.")
+            self.__initialize_user_db_s3()
+        else:
+            os.makedirs(self.__get_path, exist_ok=True)
+            with open(self.__file_path, 'w', encoding="utf-8"):
+                pass
+            self.__initialize_user_db()
+        logger.info("UserDBManager instance initialized.")
+        
 
     def __initialize_user_db(self) -> None:
         """Initialize the keys in the user-specific database"""
@@ -108,6 +153,24 @@ class UserDBManager:
             individual_store['hash_string'] = b''
             individual_store['secured_user_string'] = b''
             individual_store['created_on'] = b''
+
+
+    def __initialize_user_db_s3(self) -> None:
+        """Initialize the keys in the user-specific database in S3."""
+        s3_client = boto3.client('s3')
+        bucket_name = self.__get_path.split('/')[2]
+        key_name = '/'.join(self.__file_path.split('/')[3:])
+        
+        # Creating an empty DBM file and uploading to S3
+        with dbm.open(self.__file_path, 'n') as individual_store:
+            individual_store['_id'] = b''
+            individual_store['hash_string'] = b''
+            individual_store['secured_user_string'] = b''
+            individual_store['created_on'] = b''
+        
+        # with open(self.__file_path, 'rb') as file_data:
+        #     s3_client.upload_fileobj(file_data, bucket_name, key_name)
+
 
     def serialize_data(
             self,
@@ -228,6 +291,14 @@ class UserDBManager:
             else:
                 logger.error("[STORAGE] User ID is None. Unable to assign to uid")
                 raise TypeError("User ID is None. Unable to assign to 'uid'.")
+            
+            if external_support:
+                s3_client = boto3.client('s3')
+                bucket_name = self.__get_path.split('/')[2]
+                key_name = '/'.join(self.__file_path.split('/')[3:])
+                
+                with open(self.__file_path, 'rb') as file_data:
+                    s3_client.upload_fileobj(file_data, bucket_name, key_name)
 
         return uid
 
