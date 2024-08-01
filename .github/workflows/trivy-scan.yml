@@ -6,9 +6,7 @@ on:
       - develop
 
   schedule:
-    - cron: "*/2 * * * *" #test
-    - cron: "0 0 * * 1" 
-    - cron: "0 0 * * 5"
+    - cron: "24 12 * * *" #test
 
 permissions:
   id-token: write
