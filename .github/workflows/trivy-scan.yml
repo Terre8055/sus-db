@@ -1,12 +1,12 @@
 name: AWS Trivy Scan
 
 on:
-  push:
-    branches:
-      - develop
+  # push:
+  #   branches:
+  #     - develop
 
   schedule:
-    - cron: "24 12 * * *" #test
+    - cron: "27 12 * * *" #test
 
 permissions:
   id-token: write
