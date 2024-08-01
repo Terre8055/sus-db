@@ -1,12 +1,7 @@
 name: AWS Trivy Scan
 
 on:
-  # push:
-  #   branches:
-  #     - develop
-
-  schedule:
-  - cron: "33 12 * * *" #test
+  workflow_dispatch:
 
 permissions:
   id-token: write
