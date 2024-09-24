@@ -1,0 +1,107 @@
+name: Track deployment frequency
+
+on:
+    schedule: 
+        - cron: "0 0 * * 5"
+
+env:
+  GIT_SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+
+jobs:
+  deployment-frequency:
+    name: Deployment frequency scan
+    runs-on: ubuntu-20.04
+
+    steps:
+
+      - name: Send Slack Message - Generating Deployment Metrics
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Generating Deployment Metrics for Project ID: xxxxxx :bar_chart:\"}" $SLACK_WEBHOOK
+
+      - name: Retrieve deployment frequency
+        uses: DeveloperMetrics/deployment-frequency@main
+        id: deployment-frequency
+        with:
+          workflows: 'AWS Trivy Scan'
+          actions-token: "${{ secrets.GITHUB_TOKEN }}"
+          default-branch: "develop"
+    
+      - name: Retrieve lead time to changes
+        uses: DeveloperMetrics/lead-time-for-changes@main
+        id: lead-time-to-change
+        with:
+          workflows: 'AWS Trivy Scan'
+          actions-token: "${{ secrets.GITHUB_TOKEN }}"
+          default-branch: "develop"
+
+      - name: Extract deployment frequency results
+        id: extract-results
+        run: |
+          DEPLOYMENT_FREQUENCY_RESULTS=$(cat "${{ steps.deployment-frequency.outputs.markdown-file }}" | sed -n '/Results:/p' | sed 's/\*\*/\*/g')
+          LEAD_TIME_CHANGE_FREQUENCY=$(cat "${{ steps.lead-time-to-change.outputs.markdown-file }}" | sed -n '/Results:/p' | sed 's/\*\*/\*/g')
+          echo "DEPLOYMENT_FREQUENCY_RESULTS=$DEPLOYMENT_FREQUENCY_RESULTS" >> $GITHUB_ENV
+          echo "LEAD_TIME_CHANGE_FREQUENCY=$LEAD_TIME_CHANGE_FREQUENCY" >> $GITHUB_ENV
+
+      - name: Prepare Slack message
+        id: prepare-slack-message
+        run: |
+          JOB_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          
+          MESSAGE_JSON=$(jq -n --arg job_url "$JOB_URL" --arg df "$DEPLOYMENT_FREQUENCY_RESULTS" --arg ltc "$LEAD_TIME_CHANGE_FREQUENCY" '{
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Deployment Frequency*"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": $df
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Lead time for Changes*"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": $ltc
+                }
+              },
+              {
+                "type": "actions",
+                "elements": [
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View full report",
+                      "emoji": true
+                    },
+                    "url": $job_url
+                  }
+                ]
+              }
+            ]
+          }')
+          echo "MESSAGE_JSON<<EOF" >> $GITHUB_ENV
+          echo "$MESSAGE_JSON" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Send metrics report to Slack Channel 
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          MESSAGE_JSON: ${{ env.MESSAGE_JSON }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data "$MESSAGE_JSON" $SLACK_WEBHOOK
