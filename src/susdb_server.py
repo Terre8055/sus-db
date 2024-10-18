@@ -1,91 +1,65 @@
-import http.server
-import socketserver
-import json
+from flask import Flask, request, jsonify
 from user_db_manager import UserDBManager
 import argon2
-from urllib.parse import urlparse, parse_qs
 
-import logging
+app = Flask(__name__)
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
-logger = logging.getLogger(__name__)
+def get_request_data():
+    """Combine JSON, form, and query string data from the request."""
+    data = {}
+    # Get JSON data
+    if request.is_json:
+        data.update(request.get_json())
+    # Get form data
+    data.update(request.form.to_dict())
+    # Get query string arguments
+    data.update(request.args.to_dict())
+    return data
 
-class SusDBHandler(http.server.SimpleHTTPRequestHandler):
-    def do_POST(self):
-        content_length = int(self.headers['Content-Length'])
-        post_data = self.rfile.read(content_length)
-        
-        # Parse URL and query parameters
-        parsed_path = urlparse(self.path)
-        path = parsed_path.path
-        query = parse_qs(parsed_path.query)
+@app.route('/store', methods=['POST'])
+def store_user_string():
+    data = get_request_data()
+    user_string = data.get('req')
+    req = {'request_string': user_string}
+    uid = UserDBManager().store_user_string(req).get('id')
+    return jsonify({'uid': uid})
 
-        # Combine POST data and query parameters
-        data = json.loads(post_data.decode('utf-8')) if post_data else {}
-        data.update({k: v[0] for k, v in query.items()})
-
-        response = {}
-        match path:
-            case '/store':
-                response = self.store_user_string(data)
-            case '/verify':
-                response = self.verify_user(data)
-            case '/view':
-                response = self.display_user_db(data)
-            case '/retrieve':
-                response = self.deserialize_data(data)
-            case '/close':
-                response = self.remove_user_account(data)
-            case _:
-                self.send_error(404, "Endpoint not found")
-                return
-
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.end_headers()
-        self.wfile.write(json.dumps(response).encode('utf-8'))
-
-    def store_user_string(self, data):
-        user_string = data.get('req')
-        req = {'request_string': user_string}
-        uid = UserDBManager().store_user_string(req).get('id')
-        return {'uid': uid}
-
-    def verify_user(self, data):
-        req = {
-            'request_string': data.get('req'),
-            'uid': data.get('uid')
-          }
+@app.route('/verify', methods=['POST'])
+def verify_user():
+    data = get_request_data()
+    req = {
+        'request_string': data.get('string'),
+        'uid': data.get('uid')
+    }
+    try:
         msg = UserDBManager(uid=data.get('uid')).verify_user(req)
-        
-        if msg != "Success":
-            msg = "failed"
-        return {'status': msg}
+        return jsonify({'status': msg})
+    except argon2.exceptions.InvalidHashError:
+        return jsonify({'error': 'Invalid parameters passed, Check uid or string'}), 400
 
-    def display_user_db(self, data):
-        uid = data.get('req')
-        req = {'id': uid}
-        uid = UserDBManager().display_user_db(req).get('id')
-        return {'uid': uid}
+@app.route('/view', methods=['POST'])
+def display_user_db():
+    data = get_request_data()
+    uid = data.get('uid')
+    user_db_view = UserDBManager(uid).display_user_db(uid)
+    return jsonify({'db_view': user_db_view})
 
-    def deserialize_data(self, data):
-        uid = data.get('req')
-        req = {'id': uid}
-        uid = UserDBManager().deserialize_data(req).get('id')
-        return {'uid': uid}
+@app.route('/retrieve', methods=['POST'])
+def deserialize_data():
+    data = get_request_data()
+    uid = data.get('uid')
+    user_key = data.get('key')
+    user_data = UserDBManager(uid).deserialize_data(uid, user_key)
+    return jsonify({'user_data': user_data})
 
-    def remove_user_account(self, data):
-        uid = data.get('req')
-        req = {'id': uid}
-        uid = UserDBManager().remove_user_account(req).get('id')
-        return {'uid': uid}
+@app.route('/close', methods=['POST'])
+def remove_user_account():
+    data = get_request_data()
+    uid = data.get('uid')
+    secured_user_string = data.get('sus')
+    req = {'uid': uid, 'sus': secured_user_string}
+    response = UserDBManager(uid).close_account(req)
+    return jsonify({'response': response})
 
-
-def run_server(port=8000):
-    with socketserver.TCPServer(("", port), SusDBHandler) as httpd:
-        print(f"Serving SusDB at port {port}")
-        httpd.serve_forever()
-
-if __name__ == "__main__":
-    run_server()
+if __name__ == '__main__':
+    app.run(debug=True, port=8000)
