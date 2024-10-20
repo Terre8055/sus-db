@@ -20,6 +20,10 @@ def get_request_data():
     data.update(request.args.to_dict())
     return data
 
+def parse_accept_init(data):
+    """Parse the accept_init parameter from request data."""
+    return data.get('accept_init', '').lower() == 'true'
+
 @app.route(STORE, methods=['POST'])
 def store_user_string():
     """
@@ -34,7 +38,7 @@ def store_user_string():
     data = get_request_data()
     user_string = data.get('req')
     req = {'request_string': user_string}
-    uid = UserDBManager().store_user_string(req).get('id')
+    uid = UserDBManager(accept_init=parse_accept_init(data)).store_user_string(req).get('id')
     return jsonify({'uid': uid})
 
 @app.route(VERIFY, methods=['POST'])
@@ -42,7 +46,7 @@ def verify_user():
     """
     Verify a user's string in the database.
 
-    This endpoint expects a POST request with a 'string' and 'uid' parameter.
+    This endpoint expects a POST request with a 'string', 'accept_init' and 'uid' parameter.
     It verifies the user's string in the database and returns a message indicating the result.
 
     Returns:
@@ -51,10 +55,10 @@ def verify_user():
     data = get_request_data()
     req = {
         'request_string': data.get('string'),
-        'uid': data.get('uid')
+        'uid': data.get('uid'),
     }
     try:
-        msg = UserDBManager(uid=data.get('uid')).verify_user(req)
+        msg = UserDBManager(accept_init=parse_accept_init(data), uid=data.get('uid')).verify_user(req)
         return jsonify({'status': msg})
     except argon2.exceptions.InvalidHashError:
         return jsonify({'error': 'Invalid parameters passed, Check uid or string'}), 400
@@ -64,7 +68,7 @@ def display_user_db():
     """
     Display the user database.
 
-    This endpoint expects a POST request with a 'uid' parameter.
+    This endpoint expects a POST request with a 'uid' and 'accept_init' parameter.
     It displays the user database and returns the view.
 
     Returns:
@@ -72,7 +76,7 @@ def display_user_db():
     """
     data = get_request_data()
     uid = data.get('uid')
-    user_db_view = UserDBManager(uid).display_user_db(uid)
+    user_db_view = UserDBManager(accept_init=parse_accept_init(data), uid=uid).display_user_db(uid)
     sanitized_db_view = {str(k): v for k, v in user_db_view.items()}
     return jsonify({'db_view': sanitized_db_view})
 
@@ -81,7 +85,7 @@ def deserialize_data():
     """
     Deserialize user data from the database.
 
-    This endpoint expects a POST request with a 'uid' and 'key' parameter.
+    This endpoint expects a POST request with a 'uid', 'key' and 'accept_init' parameter.
     It deserializes the user data from the database and returns the data.
 
     Returns:
@@ -90,7 +94,7 @@ def deserialize_data():
     data = get_request_data()
     uid = data.get('uid')
     user_key = data.get('key')
-    user_data = UserDBManager(uid).deserialize_data(uid, user_key)
+    user_data = UserDBManager(accept_init=parse_accept_init(data), uid=uid).deserialize_data(uid, user_key)
     return jsonify({'user_data': user_data})
 
 @app.route(CLOSE, methods=['POST'])
@@ -98,7 +102,7 @@ def remove_user_account():
     """
     Remove a user's account from the database.
 
-    This endpoint expects a POST request with a 'uid' and 'sus' parameter.
+    This endpoint expects a POST request with a 'uid', 'sus' and 'accept_init' parameter.
     It removes the user's account from the database and returns a response.
 
     Returns:
@@ -108,7 +112,7 @@ def remove_user_account():
     uid = data.get('uid')
     secured_user_string = data.get('sus')
     req = {'uid': uid, 'sus': secured_user_string}
-    response = UserDBManager(uid).close_account(req)
+    response = UserDBManager(accept_init=parse_accept_init(data), uid=uid).close_account(req)
     return jsonify({'response': response})
 
 @app.route(RECOVER, methods=['POST'])
@@ -116,7 +120,7 @@ def recover_account():
     """
     Recover a user's account from the database.
 
-    This endpoint expects a POST request with a 'uid' and 'user_string' parameter.
+    This endpoint expects a POST request with a 'uid', 'user_string' and 'accept_init' parameter.
     It recovers the user's account from the database and returns a response.
 
     Returns:
@@ -126,7 +130,7 @@ def recover_account():
     uid = data.get('uid')
     user_string = data.get('user_string')
     req = {'_id': uid, 'user_string': user_string}
-    response = UserDBManager(uid).recover_account(req)
+    response = UserDBManager(accept_init=parse_accept_init(data), uid=uid).recover_account(req)
     return jsonify({'response': response})
 
 if __name__ == '__main__':
