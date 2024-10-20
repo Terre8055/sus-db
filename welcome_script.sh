@@ -25,7 +25,7 @@ EOF
 
 # Start the Flask server
 echo "Starting SusDB server..."
-python3 /app/src/susdb_server.py &
+python3 src/main.py &
 
 # Wait for the server to start
 sleep 2
@@ -33,7 +33,7 @@ sleep 2
 # Display server information
 cat << EOF
 
-SusDB server is now running on http://localhost:8000
+SusDB server is now running on http://host-ip:8000
 
 Available endpoints:
   POST /store    - Store a user string
