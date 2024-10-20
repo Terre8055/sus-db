@@ -184,52 +184,42 @@ class UserDBManager:
         return secure_user_string
 
 
-    def store_user_string(
-            self,
-            req: Dict[str, str]) \
-            -> Dict[str, str] | None:
-        """Store user string after encryption and generate
-        secure user string using uuid and shortuuid helper\
-        encoding
+    def store_user_string(self, req: Dict[str, str]) -> Optional[Dict[str, str]]:
         """
-        for key in req.keys():
-            if not req.get(key):
-                logger.error(f"[STORAGE] Empty request received")
-                return None
+        Store user string after encryption and generate secure user string.
+
+        Args:
+            req (Dict[str, str]): The request containing the user string.
+
+        Returns:
+            Optional[Dict[str, str]]: A dictionary containing the user ID if successful, None otherwise.
+        """
+        # Validate input
+        if not all(req.values()):
+            logger.error("[STORAGE] Empty request received")
+            return None
+
         serialised_data = self.serialize_data(req)
         user_hash = self.hash_user_string(serialised_data)
-        uid: dict = {}
 
-        with dbm.open(self.__file_path, 'w') as individual_store:
-            individual_store['hash_string'] = user_hash.encode('utf-8)')
-            hash_string = individual_store.get('hash_string')
+        with dbm.open(self.__file_path, 'c') as individual_store:
+            individual_store['hash_string'] = user_hash
+            
+            current_datetime = datetime.datetime.now().isoformat()
+            secured_user_string = self.generate_secured_string()
 
-            current_datetime = datetime.datetime.now()
-            formatted_datetime = current_datetime.strftime(
-                "%Y-%m-%dT%H:%M:%S.%f"
-            )
-            current_date = datetime.datetime.strptime(
-                formatted_datetime, "%Y-%m-%dT%H:%M:%S.%f"
-            )
-
-            if hash_string is not None:
-                secured_user_string = self.generate_secured_string().encode('utf-8')
-                individual_store['secured_user_string'] = secured_user_string
-                individual_store['_id'] = self.__unique_identifier.encode(
-                    'utf-8')
-                individual_store['created_on'] = str(
-                    current_date).encode('utf-8')
+            individual_store['secured_user_string'] = secured_user_string
+            individual_store['_id'] = self.__unique_identifier
+            individual_store['created_on'] = current_datetime
 
             user_id = individual_store.get('_id')
             
             if user_id:
-                uid.update(id = user_id.decode('utf-8'))
-                logger.info("[STORAGE] UserID successfully assigned...")
+                logger.info("[STORAGE] UserID successfully assigned")
+                return {"id": user_id.decode('utf-8') }
             else:
                 logger.error("[STORAGE] User ID is None. Unable to assign to uid")
-                raise TypeError("User ID is None. Unable to assign to 'uid'.")
-
-        return uid
+                return None
 
     def verify_user(
             self,
@@ -246,17 +236,15 @@ class UserDBManager:
         if not user_id:
             return "UID not provided in the request."
 
-        file_name = f"user_db_{user_id}"
-        file_path = os.path.join(self.__get_path, file_name)
         user_string = self.serialize_data(req)
 
-        if os.path.exists(file_path):
-            with dbm.open(file_path, 'r') as individual_store:
-                try:
-                    user_hash_bytes = individual_store.get("hash_string")
-                    if user_hash_bytes is not None:
-                        user_hash = user_hash_bytes.decode('utf-8')
-                except KeyError:
+        # Use display_user_db to get the user data
+        user_data = self.display_user_db(user_id)
+
+        if isinstance(user_data, dict):
+            try:
+                user_hash = user_data.get("hash_string")
+                if user_hash is None:
                     return "User hash not found in the database."
 
                 try:
@@ -267,22 +255,29 @@ class UserDBManager:
 
                 if check_validity:
                     logger.info(f"[VERIF] User verification successful for UID: {user_id}.")
-                    return "Success"
+                    return "Successful"
                 
                 logger.warning(f"[VERIF] User verification failed for UID: {user_id}.")
                 return None
+            except Exception as e:
+                logger.error(f"[VERIF] Error during verification for UID: {user_id}. Error: {str(e)}")
+                return f"Error during verification: {str(e)}"
         else:
-            logger.error(f"[VERIF] No database found for UID: {user_id}")
-            return f"No database found for UID: {user_id}"
+            # If user_data is a string, it means no database was found
+            logger.error(f"[VERIF] {user_data}")
+            return user_data
 
-    def display_user_db(self, user_id: str) \
-            -> str | Dict[str | bytes, str]:
+    def display_user_db(self, user_id: str) -> Union[str, Dict[str, str]]:
         """Display the contents of the user-specific database
 
+        Args:
+            user_id (str): The user ID to look up the database for.
+
         Returns:
-            Dict[str | bytes, str]:  A dictionary containing the database contents.
+            Union[str, Dict[str, str]]: A dictionary containing the database contents,
+            or an error message if the database is not found.
         """
-        view_database = {}
+        view_database: Dict[str, str] = {}
         file_name = f"user_db_{user_id}"
         file_path = os.path.join(self.__get_path, file_name)
         
@@ -290,13 +285,14 @@ class UserDBManager:
             with dbm.open(file_path, 'r') as individual_store:
                 for key in individual_store.keys():
                     try:
-                        view_database[key] = individual_store[key].decode('utf-8')
+                        view_database[key.decode('utf-8')] = individual_store[key].decode('utf-8')
                     except UnicodeDecodeError:
-                        view_database[key] = individual_store[key].hex()
-
-                    return view_database
+                        view_database[key.decode('utf-8')] = individual_store[key].hex()
+            
+            logger.info(f"[DISPLAY] Database contents retrieved for UID: {user_id}")
+            return view_database
                 
-        logger.error(f"[DISPLAY] No database founD for UID: {user_id}")
+        logger.error(f"[DISPLAY] No database found for UID: {user_id}")
         return f"No database found for UID: {user_id}"
 
     def check_sus_integrity(self, req: Dict[str, str]) -> str:
@@ -337,48 +333,48 @@ class UserDBManager:
         logger.error(f"[RESTORE] DBM not found for user: {get_user_id}")
         return f"DBM not found"
 
-    def recover_account(self, req: Dict[str, str]) -> Union[Dict[str, str], str]:
-        """Method to recover account with id and user string
+    def recover_account(self, req: Dict[str, str]) -> Optional[Dict[str, str]]:
+        """
+        Recover an account with id and user string.
 
         Args:
-            req (Dict[str, str]): Request data passed as a dict
+            req (Dict[str, str]): Request data containing '_id' and 'user_string'.
+
+        Returns:
+            Optional[Dict[str, str]]: A dictionary containing the user ID and secured user string if successful, None otherwise.
         """
-        response_data: Dict[str, str] = {}
-        
         get_uid = req.get('_id')
-        if not get_uid:
-            raise ValueError('No value received for id')
-
         user_string = req.get('user_string')
-        if not user_string:
-            raise ValueError('No value for user_string')
 
-        serialised_string = self.serialize_data({'request_string': user_string})
+        if not get_uid or not user_string:
+            logger.error("[RECOVER] Missing '_id' or 'user_string' in request")
+            return None
 
         file_name = f"user_db_{get_uid}"
         file_path = os.path.join(self.__get_path, file_name)
         
-        if os.path.exists(file_path):
-            logger.info(f'[RECOVER] File for user: {get_uid} exists.')
-            with dbm.open(file_path, 'w') as individual_store:
-                logger.info(f'[RECOVER] Initiating File recovery for user: {get_uid}')
-                try:
-                    hashed_string = self.hash_user_string(serialised_string)
-                    if hashed_string:
-                        individual_store['hash_string'] = hashed_string.encode('utf-8')
-                        logger.info(f"[RECOVER] String hashed successfully for file: {get_uid}")
-                    hash_string_bytes = individual_store.get('hash_string')
-                    if hash_string_bytes is not None:
-                        secure_user_string = self.generate_secured_string().encode("utf-8")
-                        individual_store['secured_user_string'] = secure_user_string
-                        response_data.update(_id=get_uid, sus=secure_user_string)
-                        logger.info(f"[RECOVER] Recovery completed, sus assigned")
-                        return response_data
-                except Exception as e:
-                    logger.error(f"[RECOVER] {e}", exc_info=True)
+        if not os.path.exists(file_path):
+            logger.error(f"[RECOVER] DBM not found for user: {get_uid}")
+            return None
 
-        logger.error(f"[RECOVER] DBM not found for user: {get_uid}")
-        return "DBM not found"
+        serialized_data = self.serialize_data({'request_string': user_string})
+        user_hash = self.hash_user_string(serialized_data)
+
+        with dbm.open(file_path, 'c') as individual_store:
+            individual_store['hash_string'] = user_hash
+            
+            current_datetime = datetime.datetime.now().isoformat()
+            secured_user_string = self.generate_secured_string()
+
+            individual_store['secured_user_string'] = secured_user_string
+            individual_store['_id'] = get_uid
+            individual_store['created_on'] = current_datetime
+
+            logger.info(f"[RECOVER] Account recovered successfully for user: {get_uid}")
+            return {
+                "id": get_uid,
+                "sus": secured_user_string
+            }
     
     
     def close_account(self, req: Dict[str, str]) -> str:
@@ -401,25 +397,31 @@ class UserDBManager:
         file_name = f"user_db_{user_id}"
         file_path = os.path.join(self.__get_path, file_name)
         
-        if os.path.exists(file_path):
-            try:
-                with dbm.open(file_path, 'r') as individual_store:
-                    db_secured = individual_store.get('secured_user_string')
-                    if db_secured is None:
-                        logger.error(f"[CLOSE ACCOUNT]  Account does not exist for UID: {user_id}")
-                        return 'User not found'
-                    check_integrity = db_secured.decode('utf-8') == secured_user_string
-                    if not check_integrity:
-                        return 'Provided Secured User String does not match for UID'
-                    os.remove(file_path)
-                    if os.path.exists(file_path):
-                        logger.warning(f"[CLOSE ACCOUNT] DBM file not deleted")
-                        return 'Error' 
-                    logger.info(f"[CLOSE ACCOUNT] Account deleted successfully for UID: {user_id}")
-                    return 'Success'
-            except Exception as e:
-                logger.error(f"[CLOSE ACCOUNT] {e}", exc_info=True)
-                return 'Error deleting account'
-     
-        logger.error(f"[CLOSE ACCOUNT] DBM not found for user: {user_id}")
-        return 'DBM not found'    
+        if not os.path.exists(file_path):
+            logger.error(f"[CLOSE ACCOUNT] DBM not found for user: {user_id}")
+            return 'DBM not found'
+
+        try:
+            with dbm.open(file_path, 'r') as individual_store:
+                db_secured = individual_store.get('secured_user_string')
+                if db_secured is None:
+                    logger.error(f"[CLOSE ACCOUNT] Account does not exist for UID: {user_id}")
+                    return 'User not found'
+                if db_secured.decode('utf-8') != secured_user_string:
+                    logger.warning(f"[CLOSE ACCOUNT] Provided Secured User String does not match for UID: {user_id}")
+                    return 'Provided Secured User String does not match for UID'
+            
+            os.remove(file_path)
+            if os.path.exists(file_path):
+                logger.error(f"[CLOSE ACCOUNT] Failed to delete DBM file for UID: {user_id}")
+                return 'Error: Failed to delete account'
+            
+            logger.info(f"[CLOSE ACCOUNT] Account deleted successfully for UID: {user_id}")
+            return 'Success'
+        except Exception as e:
+            logger.error(f"[CLOSE ACCOUNT] Error deleting account for UID: {user_id}. Error: {str(e)}", exc_info=True)
+            return 'Error deleting account'
+
+
+
+

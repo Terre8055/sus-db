@@ -1,0 +1,57 @@
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Environment variables
+.env
+
+# Git related
+.git/
+.gitignore
+
+# IDE specific files
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Docker related
+Dockerfile
+docker-compose.yml
+
+# Temporary files
+*.tmp
+*.swp
+
+# Build artifacts
+build/
+dist/
+
+# Test coverage
+.coverage
+htmlcov/
+
+# Documentation
+docs/
+
+# Dependency management
+pip-lock.txt
+poetry.lock
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# macOS specific
+.DS_Store
+
+# Windows specific
+Thumbs.db
+
