@@ -109,7 +109,7 @@ jobs:
         restore-keys: |
             ${{ runner.os }}-buildx-${{ github.ref }}
             ${{ runner.os }}-buildx
-        
+
 
     - name: Build and push image to ECR
       id: build-image
@@ -125,8 +125,14 @@ jobs:
         tags: |
           ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
           ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
-        cache-from: type=local,src=/tmp/.buildx-cache
-        cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+        cache-from: type=gha,src=/tmp/.buildx-cache
+        cache-to: type=gha,dest=/tmp/.buildx-cache-new,mode=max
+
+
+    - name: Move cache
+      run: |
+        rm -rf /tmp/.buildx-cache
+        mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
     - name: Clean up
       if: always()
