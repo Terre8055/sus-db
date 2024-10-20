@@ -132,7 +132,12 @@ jobs:
     - name: Move cache
       run: |
         rm -rf /tmp/.buildx-cache
-        mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+        if [ -d /tmp/.buildx-cache-new ]; then
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+        else
+          echo "No new cache to move."
+        fi
+      shell: /usr/bin/bash -e {0}
 
     - name: Clean up
       if: always()
