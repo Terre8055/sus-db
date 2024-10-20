@@ -95,17 +95,38 @@ jobs:
         echo "Upload  env variables to s3..."
         aws s3 cp .env s3://${{ env.S3_BUCKET }}
 
-    - name: Build, tag, and push image to Amazon ECR
+
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v2
+
+
+    - name: Cache Docker layers
+      uses: actions/cache@v3
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.ref }}
+        restore-keys: |
+            ${{ runner.os }}-buildx-${{ github.ref }}
+            ${{ runner.os }}-buildx
+        
+
+    - name: Build and push image to ECR
+      id: build-image
+      uses: docker/build-push-action@v6
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: ${{ env.ECR_REPO }}
         IMAGE_TAG: ${{ steps.versioning.outputs.new_version }}
-      run: |
-        ls -al
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+      with: 
+        context: .
+        push: true
+        builder: ${{ steps.buildx.outputs.name }}
+        tags: |
+          ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+        cache-from: type=local,src=/tmp/.buildx-cache
+        cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
     - name: Clean up
       if: always()
