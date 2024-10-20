@@ -93,7 +93,7 @@ jobs:
     - name: Temporarily Store .env in s3 config store
       run: |
         echo "Upload  env variables to s3..."
-        aws s3 cp .env s3://${{ env.S3_BUCKET }}-configdonotremove
+        aws s3 cp .env s3://${{ env.S3_BUCKET }}
 
     - name: Build, tag, and push image to Amazon ECR
       env:
