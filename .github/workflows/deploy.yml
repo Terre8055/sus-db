@@ -1,8 +1,8 @@
-name: Deploy LLM CI/CD
+name: Deploy SUSDB CI/CD
 
 on:
   push:
-    branches: [ server ]
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       version_increment:
@@ -15,9 +15,11 @@ permissions:
   packages: write
 
 env:
-  SECRETS_NAME: poc/elcam/llm
-  ECR_REPO: elcam-llm-api
-  PROJECT_ID: elcam-llm
+  SECRETS_NAME: susdb
+  ECR_REPO: susdb
+  ECR_REGISTRY: 590183661216.dkr.ecr.us-east-1.amazonaws.com
+  PROJECT_ID: susdb
+  S3_BUCKET: susdb
 
 jobs:
   build-push-and-tag:
@@ -85,13 +87,13 @@ jobs:
       run: |
         echo "Retrieving secrets from AWS Secrets Manager..."
         SECRETS=$(aws secretsmanager get-secret-value --secret-id ${{ env.SECRETS_NAME }} --query SecretString --output text)
-        echo "$SECRETS" | jq -r 'to_entries | map("\(.key)=\(.value)") | .[]' > .env.llm
+        echo "$SECRETS" | jq -r 'to_entries | map("\(.key)=\(.value)") | .[]' > .env
 
 
     - name: Temporarily Store .env in s3 config store
       run: |
-        echo "Upload llm env variables to s3..."
-        aws s3 cp .env.llm s3://elcam-configdonotremove
+        echo "Upload  env variables to s3..."
+        aws s3 cp .env s3://${{ env.S3_BUCKET }}-configdonotremove
 
     - name: Build, tag, and push image to Amazon ECR
       env:
@@ -107,7 +109,7 @@ jobs:
 
     - name: Clean up
       if: always()
-      run: rm -f .env.llm
+      run: rm -f .env
 
 
   deploy_to_managed_instances:
@@ -133,7 +135,7 @@ jobs:
         run: |
           # Fetch instance IDs with specific tags, e.g., Environment=prod
           instance_ids=$(aws ec2 describe-instances \
-            --filters "Name=tag:Project,Values=Elcam" "Name=instance-state-name,Values=running" \
+            --filters "Name=tag:Project,Values=Susdb" "Name=instance-state-name,Values=running" \
             --query "Reservations[].Instances[].InstanceId" \
             --output text)
           
@@ -166,13 +168,13 @@ jobs:
             cd /home/ec2-user && \
             rm -rf .env.llm && \
             echo 'Downloading docker-compose.yml from S3...' && \
-            aws s3 cp s3://elcam-configdonotremove/docker-compose.yml . && \
-            echo 'Downloading .env.llm from S3...' && \
-            aws s3 cp s3://elcam-configdonotremove/.env.llm . && \
+            aws s3 cp s3://${{ env.S3_BUCKET }}/docker-compose.yml . && \
+            echo 'Downloading .env from S3...' && \
+            aws s3 cp s3://${{ env.S3_BUCKET }}/.env . && \
             echo 'Stopping existing Docker containers...' && \
             /usr/local/bin/docker-compose -f /home/ec2-user/docker-compose.yml down && \
             echo 'Logging in to Amazon ECR...' && \
-            aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin 330858616968.dkr.ecr.eu-west-1.amazonaws.com && \
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }} && \
             echo 'Pulling latest Docker images...' && \
             /usr/local/bin/docker-compose -f /home/ec2-user/docker-compose.yml pull && \
             echo 'Starting Docker services with Docker Compose...' && \
@@ -317,7 +319,7 @@ jobs:
         git config user.email michaelappiah2018@icloud.com
         git add VERSION
         git commit -m "Bump version to ${{ needs.build-push-and-tag.outputs.new_version }}"
-        git pull --rebase origin main
+        git pull --no-edit origin main
         git push
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

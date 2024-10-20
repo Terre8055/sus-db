@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  susdb:
+    image: 590183661216.dkr.ecr.us-east-1.amazonaws.com/susdb:latest
+    container_name: susdb
+    ports:
+      - 8000:8000
+    env_file:
+      - .env
