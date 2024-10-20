@@ -167,7 +167,7 @@ jobs:
         run: |
           # Fetch instance IDs with specific tags, e.g., Environment=prod
           instance_ids=$(aws ec2 describe-instances \
-            --filters "Name=tag:Project,Values=Susdb" "Name=instance-state-name,Values=running" \
+            --filters "Name=tag:Project,Values=SUS" "Name=instance-state-name,Values=running" \
             --query "Reservations[].Instances[].InstanceId" \
             --output text)
           
