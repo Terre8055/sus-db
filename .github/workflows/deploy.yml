@@ -190,7 +190,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: eu-west-1
           instance-ids: ${{ steps.get_instances.outputs.instance_ids }}
           working-directory: /home/ec2-user
           comment: "Running docker commands"
@@ -259,7 +259,7 @@ jobs:
   
       - name: Remove env file from s3
         if: always()
-        run: aws s3 rm s3://elcam-configdonotremove/.env.llm
+        run: aws s3 rm s3://${{ env.S3_BUCKET }}/.env
 
 
   create-release:

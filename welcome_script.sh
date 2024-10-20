@@ -25,7 +25,7 @@ EOF
 
 # Start the Flask server
 echo "Starting SusDB server..."
-python3 src/susdb_server.py &
+python3 /app/src/susdb_server.py &
 
 # Wait for the server to start
 sleep 2
