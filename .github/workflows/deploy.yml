@@ -17,7 +17,7 @@ permissions:
 env:
   SECRETS_NAME: susdb
   ECR_REPO: susdb
-  ECR_REGISTRY: 590183661216.dkr.ecr.us-east-1.amazonaws.com
+  ECR_REGISTRY: 590183661216.dkr.ecr.eu-west-1.amazonaws.com
   PROJECT_ID: susdb
   S3_BUCKET: susdb
 
