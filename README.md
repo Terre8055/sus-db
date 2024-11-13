@@ -50,13 +50,34 @@ Read the [Classical Post Office Story](https://github.com/Terre8055/sus-db/wiki/
 
 ## Running Locally
 
+### Using Docker Compose
+
+For a more streamlined setup, consider using Docker Compose. This allows you to specify an environment file directly in your `docker-compose.yml`, making it easier to manage environment variables. Here’s a basic example of how to set it up:
+
+```yaml
+version: '3'
+services:
+  susdb:
+    image: terre8055/susdb
+    env_file: .env
+```
+
+## Running without external storage and server
+
+If you prefer to use plain Docker commands, you can specify the environment file using the `--env-file` flag. Here’s how to run the `susdb` container with an environment file:
+
+```bash
+docker run --name <any-name> --env-file .env -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb
+```
+
+This command will load the environment variables from the specified `.env` file, ensuring your container has the necessary configuration.
 
 ### Pull the `susdb` Container Image
 
 To get the latest `susdb` container image from Docker Hub, run:
 
 ```bash
-sudo docker pull terre8055/susdb:0.0.1
+sudo docker pull terre8055/susdb
 ```
 
 ### Run the `susdb` Container
@@ -71,7 +92,7 @@ mkdir -p $HOME/sus-db/ && touch $HOME/sus-db/susdb.log
 if you are running docker as rootless; 
 
 ```bash
-docker run --name <any-name> -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb:0.0.1 
+docker run --name <any-name> -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb 
 ```
 else; add the sudo
 
@@ -82,7 +103,7 @@ This command mounts your local `$HOME/sus-db` directory to the container's `$HOM
 To store user data using `susdb`, run the following command:
 
 ```bash
-docker run --name tiger-woodye -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb:0.0.1  python /app/src/susdb_cli.py store --string='Mike'
+docker run --name tiger-woodye -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb  python /app/src/susdb_cli.py store --string='Mike'
 ```
 A unique id will be generated used to access for local dbs
 Replace `<user_string: str>` with the actual user string you want to store.
@@ -92,7 +113,7 @@ Replace `<user_string: str>` with the actual user string you want to store.
 To retrieve user data using `susdb`, run the following command:
 
 ```bash
-docker run --name tiger-woodye -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb:0.0.1  python /app/src/susdb_cli.py retrieve --key=<data_to_retrieve: str> --uid=<uid: str>
+docker run --name tiger-woodye -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb  python /app/src/susdb_cli.py retrieve --key=<data_to_retrieve: str> --uid=<uid: str>
 ```
 
 Replace `<uid: str>` with the generated unique id after storing your string.
@@ -103,22 +124,38 @@ Replace `<key: str>` with the actual user data you want to retrieve.
 To display user db using `susdb`, run the following command:
 
 ```bash
-docker run --name tiger-woodye -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb:0.0.1  python /app/src/susdb_cli.py python /app/src/susdb_cli.py view --uid=<uid: str>
+docker run --name tiger-woodye -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb  python /app/src/susdb_cli.py python /app/src/susdb_cli.py view --uid=<uid: str>
 ```
 
 Replace `<uid: str>` with the generated unique id after storing your string.
 
-### Verify Crentials
+### Verify Credentials
 
 To verify user cred using `susdb`, run the following command:
 
 ```bash
-docker run --name tiger-woodye -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb:0.0.1  python /app/src/susdb_cli.py python /app/src/susdb_cli.py verify --string=<user_string: str> --uid=<uid: str>
+docker run --name tiger-woodye -v /path/to/home/sus-db/:/path/to/home/sus-db/ -it terre8055/susdb  python /app/src/susdb_cli.py python /app/src/susdb_cli.py verify --string=<user_string: str> --uid=<uid: str>
 ```
 
 
 Replace `<uid: str>` with the generated unique id after storing your string.
 Replace `<user_string: str>` with the actual user string.
+
+
+## Environment Variables
+
+The following table explains the values that need to be set in the `.env` file:
+
+| Variable Name              | Description                                                                                     | Example Value                |
+|----------------------------|-------------------------------------------------------------------------------------------------|-------------------------------|
+| `FILE_NAME`                | The name of the file to be used.                                                               | `my_database_file`        |
+| `GET_PATH`                 | The path where the file is located.                                                            | `/path/to/my/file`           |
+| `LOG_PATH`                 | The path where log files will be stored.                                                       | `/path/to/logs/susdb.log`    |
+| `SSDB_EXTERNAL_SUPPORT`     | Indicates whether to store the database file locally or externally using S3 (true/false).     | `true` or `false`            |
+| `AWS_ACCESS_KEY_ID`       | Your AWS access key ID for S3 access.                                                          | `AKIA...`                    |
+| `AWS_SECRET_ACCESS_KEY`   | Your AWS secret access key for S3 access.                                                      | `wJalr...`                   |
+| `AWS_REGION`               | The AWS region where your S3 bucket is located.                                               | `us-west-2`                  |
+| `S3_BUCKET_NAME`           | The name of your S3 bucket where the database file will be stored if using external support.  | `my-s3-bucket`               |
 
 
 ## Conclusion
