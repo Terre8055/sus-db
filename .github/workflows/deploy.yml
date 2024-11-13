@@ -122,7 +122,7 @@ jobs:
       id: build-image
       uses: docker/build-push-action@v6
       env:
-        ECR_REGISTRY: ${{ steps.login-dockerhub.outputs.registry }}
+        ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
         ECR_REPOSITORY: ${{ env.ECR_REPO }}
         IMAGE_TAG: ${{ steps.versioning.outputs.new_version }}
       with: 
