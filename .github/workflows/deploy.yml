@@ -1,0 +1,182 @@
+name: Deploy SUSDB CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'features/**'
+      - 'hotfix/**'
+  workflow_dispatch:
+    inputs:
+      version_increment:
+        description: 'Version increment type (major, minor, or patch)'
+        required: true
+        default: 'patch'
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  SECRETS_NAME: susdb
+  ECR_REPO: susdb
+  ECR_REGISTRY: terre8055
+  PROJECT_ID: susdb
+  S3_BUCKET: susdb
+
+jobs:
+  build-push-and-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.gitversion.outputs.semVer }}
+      branch_name: ${{ steps.branch_name.outputs.branch }}
+      is_release: ${{ steps.check_release.outputs.is_release }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Get branch name
+      id: branch_name
+      run: |
+        branch=${GITHUB_REF#refs/heads/}
+        echo "branch=${branch}" >> $GITHUB_OUTPUT
+        echo "Branch name: $branch"
+
+    - name: Install GitVersion
+      uses: gittools/actions/gitversion/setup@v3.1.11
+      with:
+        versionSpec: 5.x
+
+    - name: Determine Version
+      uses: gittools/actions/gitversion/execute@v3.1.11
+      id: gitversion
+
+    - name: Check if release branch
+      id: check_release
+      run: |
+        if [[ "${{ steps.branch_name.outputs.branch }}" == "main" ]]; then
+          echo "is_release=true" >> $GITHUB_OUTPUT
+        else
+          echo "is_release=false" >> $GITHUB_OUTPUT
+        fi
+  
+    - name: Display GitVersion outputs
+      run: |
+        echo "Branch: ${{ steps.branch_name.outputs.branch }}"
+        echo "Version: ${{ steps.gitversion.outputs.semVer }}"
+        echo "PreReleaseTag: ${{ steps.gitversion.outputs.preReleaseTag }}"
+        echo "PreReleaseLabel: ${{ steps.gitversion.outputs.preReleaseLabel }}"
+        echo "AssemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}"
+        echo "FullSemVer: ${{ steps.gitversion.outputs.fullSemVer }}"
+        echo "BranchName: ${{ steps.gitversion.outputs.branchName }}"
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Cache Docker layers
+      uses: actions/cache@v3
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.ref }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-${{ github.ref }}
+          ${{ runner.os }}-buildx
+
+    - name: Set Docker tags
+      id: docker_tags
+      run: |
+        TAGS="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:${{ steps.gitversion.outputs.semVer }},${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:${{ steps.branch_name.outputs.branch }}"
+        if [[ "${{ steps.check_release.outputs.is_release }}" == "true" ]]; then
+          TAGS="$TAGS,${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:latest"
+        fi
+        echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+
+    - name: Build and push image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.docker_tags.outputs.tags }}
+        cache-from: type=local,src=/tmp/.buildx-cache
+        cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+    - name: Move cache
+      run: |
+        rm -rf /tmp/.buildx-cache
+        if [ -d /tmp/.buildx-cache-new ]; then
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+        else
+          echo "No new cache to move."
+        fi
+
+  create-release:
+    needs: build-push-and-tag
+    if: needs.build-push-and-tag.outputs.is_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Generate Release Notes
+      id: release_notes
+      run: |
+          # Generate release notes content
+          NOTES=$(git log $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --pretty=format:"%s (%h)" | grep -E "^(feat|fix|breaking|major):" || true)
+
+          # Create release notes with template
+          cat << EOF > release_notes.md
+          # Release ${{ needs.build-push-and-tag.outputs.new_version }}
+
+          ## What's Changed
+          ${NOTES:-"* Initial release"}
+
+          ## Docker Images
+          - \`${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:${{ needs.build-push-and-tag.outputs.new_version }}\`
+          - \`${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:latest\` (main branch only)
+
+          ## Installation
+          \`\`\`bash
+          docker pull ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:${{ needs.build-push-and-tag.outputs.new_version }}
+          \`\`\`
+          EOF
+
+          # Store release notes for GitHub Release
+          {
+            echo 'RELEASE_NOTES<<EOF'
+            cat release_notes.md
+            echo 'EOF'
+          } >> $GITHUB_ENV
+
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+          tag_name: ${{ needs.build-push-and-tag.outputs.new_version }}
+          release_name: Release ${{ needs.build-push-and-tag.outputs.new_version }}
+          body: ${{ env.RELEASE_NOTES }}
+          draft: false
+          prerelease: ${{ needs.build-push-and-tag.outputs.branch_name != 'main' }}
+          
+    - name: Update Version File
+      if: needs.build-push-and-tag.outputs.branch_name == 'main'
+      run: |
+          echo "${{ needs.build-push-and-tag.outputs.new_version }}" > VERSION
+          git config user.name Terre8055
+          git config user.email michaelappiah2018@icloud.com
+          git add VERSION
+          git commit -m "chore: bump version to ${{ needs.build-push-and-tag.outputs.new_version }}"
+          git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

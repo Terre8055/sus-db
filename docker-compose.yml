@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  susdb:
+    platform: linux/amd64  # Add this line
+    image: terre8055/susdb:latest
+    container_name: susdb
+    ports:
+      - 8000:8000
+    env_file:
+      - .env
