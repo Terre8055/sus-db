@@ -139,7 +139,7 @@ jobs:
           # Release ${{ needs.build-push-and-tag.outputs.new_version }}
 
           ## What's Changed
-          ${NOTES:-"* Initial release"}
+          ${NOTES:-" Initial release"}
 
           ## Docker Images
           - \`${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:${{ needs.build-push-and-tag.outputs.new_version }}\`
