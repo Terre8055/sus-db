@@ -132,14 +132,14 @@ jobs:
       id: release_notes
       run: |
           # Generate release notes content
-          NOTES=$(git log $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --pretty=format:"* %s (%h)" | grep -E "^* (feat|fix|breaking|major):")
+          NOTES=$(git log $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --pretty=format:"%s (%h)" | grep -E "^(feat|fix|breaking|major):" || true)
 
           # Create release notes with template
           cat << EOF > release_notes.md
           # Release ${{ needs.build-push-and-tag.outputs.new_version }}
 
           ## What's Changed
-          ${NOTES:-" Initial release"}
+          ${NOTES:-"* Initial release"}
 
           ## Docker Images
           - \`${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:${{ needs.build-push-and-tag.outputs.new_version }}\`
@@ -152,9 +152,11 @@ jobs:
           EOF
 
           # Store release notes for GitHub Release
-          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
-          cat release_notes.md >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          {
+            echo 'RELEASE_NOTES<<EOF'
+            cat release_notes.md
+            echo 'EOF'
+          } >> $GITHUB_ENV
 
     - name: Create GitHub Release
       uses: actions/create-release@v1
@@ -178,4 +180,3 @@ jobs:
           git push
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
