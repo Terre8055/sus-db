@@ -1,0 +1,120 @@
+# GitVersion.yml
+mode: ContinuousDeployment
+major-version-bump-message: "^(break|breaking|major):"
+minor-version-bump-message: "^(feat|feature|minor):"
+patch-version-bump-message: "^(fix|patch):"
+no-bump-message: "^(none|skip):"
+
+# Branches configuration
+branches:
+  main:
+    regex: ^main$
+    mode: ContinuousDelivery
+    tag: ''
+    increment: Patch
+    prevent-increment-of-merged-branch-version: true
+    track-merge-target: false
+    is-release-branch: true
+    is-mainline: true
+    
+  develop:
+    regex: ^develop$
+    mode: ContinuousDeployment
+    tag: beta
+    increment: Minor
+    prevent-increment-of-merged-branch-version: false
+    track-merge-target: true
+    
+  feature:
+    regex: ^features?[/-]
+    mode: ContinuousDeployment
+    tag: alpha.{BranchName}
+    increment: Inherit
+    prevent-increment-of-merged-branch-version: false
+    track-merge-target: false
+    
+  hotfix:
+    regex: ^hotfix(es)?[/-]
+    mode: ContinuousDeployment
+    tag: beta
+    increment: Patch
+    prevent-increment-of-merged-branch-version: false
+    track-merge-target: false
+
+ignore:
+  sha: []
+
+# GitReleaseManager.yml
+create:
+  include-footer: true
+  footer-heading: Where to get it
+  footer-content: |
+    You can download this release from Docker Hub:
+    ```bash
+    docker pull terre8055/susdb:{milestone}
+    ```
+  footer-includes-milestone: true
+  milestone-replace-text: '{milestone}'
+  include-sha-section: true
+  sha-section-heading: SHA256 Hashes of the release artifacts
+  sha-section-line-format: '- `{1}` {0}'
+  allow-update-to-published: true
+
+export:
+  include-created-date-in-title: true
+  created-date-string-format: MMMM dd, yyyy
+  perform-regex-removal: true
+  regex-text: '### Where to get it(\r\n)*You can download this release from Docker Hub'
+  multiline-regex: true
+
+labels:
+  - name: breaking
+    description: Breaking changes that require major version bump
+    color: b60205
+  - name: feature
+    description: New features requiring minor version bump
+    color: 1d76db
+  - name: fix
+    description: Bug fixes requiring patch version bump
+    color: 0e8a16
+  - name: documentation
+    description: Documentation updates
+    color: 5319e7
+  - name: security
+    description: Security updates
+    color: d93f0b
+
+issue-labels-include:
+  - breaking
+  - feature
+  - fix
+  - security
+  - documentation
+
+issue-labels-exclude:
+  - chore
+  - refactor
+  - test
+  - ci
+  - style
+
+issue-labels-alias:
+  - name: breaking
+    header: Breaking Changes
+    plural: Breaking Changes
+  - name: feature
+    header: New Features
+    plural: New Features
+  - name: fix
+    header: Bug Fixes
+    plural: Bug Fixes
+  - name: security
+    header: Security Updates
+    plural: Security Updates
+  - name: documentation
+    header: Documentation Updates
+    plural: Documentation Updates
+
+references:
+  github: GitHub
+  dockerhub: Docker Hub
