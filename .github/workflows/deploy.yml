@@ -94,7 +94,7 @@ jobs:
     - name: Set Docker tags
       id: docker_tags
       run: |
-        TAGS="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:${{ steps.gitversion.outputs.semVer }},${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:${{ steps.branch_name.outputs.branch }}"
+        TAGS="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:${{ steps.gitversion.outputs.semVer }}"
         if [[ "${{ steps.check_release.outputs.is_release }}" == "true" ]]; then
           TAGS="$TAGS,${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:latest"
         fi
