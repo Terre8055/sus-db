@@ -120,8 +120,7 @@ jobs:
 
   create-release:
     needs: build-push-and-tag
-    if: |
-      needs.build-push-and-tag.outputs.is_release == 'true'
+    if: needs.build-push-and-tag.outputs.is_release == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -129,10 +128,15 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v3
+      with:
+          dotnet-version: '6.0.x'
+
     - name: Setup GitReleaseManager
       uses: gittools/actions/gitreleasemanager/setup@v0.9.7
       with:
-        versionSpec: '0.13.x'
+          versionSpec: '0.13.x'
 
     - name: Generate Release Notes
       id: release_notes
@@ -153,15 +157,6 @@ jobs:
           \`\`\`
           EOF
 
-    - name: Determine Pre-release Status
-      id: prerelease
-      run: |
-          BRANCH="${{ needs.build-push-and-tag.outputs.branch_name }}"
-          if [[ "$BRANCH" == "main" ]]; then
-            echo "is_prerelease=false" >> $GITHUB_OUTPUT
-          else
-            echo "is_prerelease=true" >> $GITHUB_OUTPUT
-          fi
     - name: Create Release
       uses: gittools/actions/gitreleasemanager/create@v0.9.7
       with:
@@ -171,7 +166,7 @@ jobs:
           milestone: ${{ needs.build-push-and-tag.outputs.new_version }}
           name: "Release ${{ needs.build-push-and-tag.outputs.new_version }}"
           inputFilePath: release_notes.md
-          isPreRelease: ${{ steps.prerelease.outputs.is_prerelease }}
+          isPreRelease: ${{ needs.build-push-and-tag.outputs.branch_name != 'main' }}
           targetcommitish: ${{ needs.build-push-and-tag.outputs.branch_name }}
           assets: |
             README.md
@@ -186,6 +181,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           owner: ${{ github.repository_owner }}
           repository: ${{ github.event.repository.name }}
+          targetDirectory: ${{ github.workspace }}
 
     - name: Close Milestone
       uses: gittools/actions/gitreleasemanager/close@v0.9.7
@@ -194,16 +190,16 @@ jobs:
           owner: ${{ github.repository_owner }}
           repository: ${{ github.event.repository.name }}
           milestone: ${{ needs.build-push-and-tag.outputs.new_version }}
+          targetDirectory: ${{ github.workspace }}
 
-    - name: Update version file
+    - name: Update Version File
       if: needs.build-push-and-tag.outputs.branch_name == 'main'
       run: |
-        echo "v${{ needs.build-push-and-tag.outputs.new_version }}" > VERSION
-        git config user.name Terre8055
-        git config user.email michaelappiah2018@icloud.com
-        git add VERSION
-        git commit -m "chore: bump version to v${{ needs.build-push-and-tag.outputs.new_version }}"
-        git pull --no-edit origin main
-        git push
+          echo "v${{ needs.build-push-and-tag.outputs.new_version }}" > VERSION
+          git config user.name Terre8055
+          git config user.email michaelappiah2018@icloud.com
+          git add VERSION
+          git commit -m "chore: bump version to v${{ needs.build-push-and-tag.outputs.new_version }}"
+          git push
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
