@@ -128,24 +128,18 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v3
-      with:
-          dotnet-version: '6.0.x'
-
-    - name: Setup GitReleaseManager
-      uses: gittools/actions/gitreleasemanager/setup@v0.9.7
-      with:
-          versionSpec: '0.13.x'
-
     - name: Generate Release Notes
       id: release_notes
       run: |
+          # Generate release notes content
+          NOTES=$(git log $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --pretty=format:"* %s (%h)" | grep -E "^* (feat|fix|breaking|major):")
+
+          # Create release notes with template
           cat << EOF > release_notes.md
           # Release ${{ needs.build-push-and-tag.outputs.new_version }}
 
           ## What's Changed
-          $(git log $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --pretty=format:"* %s (%h)" | grep -E "^* (feat|fix|breaking|major):")
+          ${NOTES:-"* Initial release"}
 
           ## Docker Images
           - \`${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:${{ needs.build-push-and-tag.outputs.new_version }}\`
@@ -157,49 +151,31 @@ jobs:
           \`\`\`
           EOF
 
-    - name: Create Release
-      uses: gittools/actions/gitreleasemanager/create@v0.9.7
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          owner: ${{ github.repository_owner }}
-          repository: ${{ github.event.repository.name }}
-          milestone: ${{ needs.build-push-and-tag.outputs.new_version }}
-          name: "Release ${{ needs.build-push-and-tag.outputs.new_version }}"
-          inputFilePath: release_notes.md
-          isPreRelease: ${{ needs.build-push-and-tag.outputs.branch_name != 'main' }}
-          targetcommitish: ${{ needs.build-push-and-tag.outputs.branch_name }}
-          assets: |
-            README.md
-            LICENSE
-            VERSION
-            docker-compose.yml
-          targetDirectory: ${{ github.workspace }}
+          # Store release notes for GitHub Release
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          cat release_notes.md >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
-    - name: Publish Release
-      uses: gittools/actions/gitreleasemanager/publish@v0.9.7
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          owner: ${{ github.repository_owner }}
-          repository: ${{ github.event.repository.name }}
-          targetDirectory: ${{ github.workspace }}
-
-    - name: Close Milestone
-      uses: gittools/actions/gitreleasemanager/close@v0.9.7
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          owner: ${{ github.repository_owner }}
-          repository: ${{ github.event.repository.name }}
-          milestone: ${{ needs.build-push-and-tag.outputs.new_version }}
-          targetDirectory: ${{ github.workspace }}
-
+          tag_name: ${{ needs.build-push-and-tag.outputs.new_version }}
+          release_name: Release ${{ needs.build-push-and-tag.outputs.new_version }}
+          body: ${{ env.RELEASE_NOTES }}
+          draft: false
+          prerelease: ${{ needs.build-push-and-tag.outputs.branch_name != 'main' }}
+          
     - name: Update Version File
       if: needs.build-push-and-tag.outputs.branch_name == 'main'
       run: |
-          echo "v${{ needs.build-push-and-tag.outputs.new_version }}" > VERSION
+          echo "${{ needs.build-push-and-tag.outputs.new_version }}" > VERSION
           git config user.name Terre8055
           git config user.email michaelappiah2018@icloud.com
           git add VERSION
-          git commit -m "chore: bump version to v${{ needs.build-push-and-tag.outputs.new_version }}"
+          git commit -m "chore: bump version to ${{ needs.build-push-and-tag.outputs.new_version }}"
           git push
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
