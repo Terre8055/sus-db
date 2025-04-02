@@ -2,7 +2,11 @@ name: Deploy SUSDB CI/CD
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - develop
+      - 'features/**'
+      - 'hotfix/**'
   workflow_dispatch:
     inputs:
       version_increment:
@@ -25,88 +29,58 @@ jobs:
   build-push-and-tag:
     runs-on: ubuntu-latest
     outputs:
-      new_version: ${{ steps.versioning.outputs.new_version }}
+      new_version: ${{ steps.gitversion.outputs.semVer }}
+      branch_name: ${{ steps.branch_name.outputs.branch }}
+      is_release: ${{ steps.check_release.outputs.is_release }}
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    # - name: Configure AWS credentials
-    #   uses: aws-actions/configure-aws-credentials@v1
-    #   with:
-    #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-    #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    #     aws-region: ${{ secrets.AWS_REGION }}
+    - name: Get branch name
+      id: branch_name
+      run: |
+        branch=${GITHUB_REF#refs/heads/}
+        echo "branch=${branch}" >> $GITHUB_OUTPUT
+        echo "Branch name: $branch"
 
-    # - name: Login to Amazon ECR
-    #   id: login-ecr
-    #   uses: aws-actions/amazon-ecr-login@v1
+    - name: Install GitVersion
+      uses: gittools/actions/gitversion/setup@v3.1.11
+      with:
+        versionSpec: 5.x
+
+    - name: Determine Version
+      uses: gittools/actions/gitversion/execute@v3.1.11
+      id: gitversion
+
+    - name: Check if release branch
+      id: check_release
+      run: |
+        if [[ "${{ steps.branch_name.outputs.branch }}" == "main" ]]; then
+          echo "is_release=true" >> $GITHUB_OUTPUT
+        else
+          echo "is_release=false" >> $GITHUB_OUTPUT
+        fi
+  
+    - name: Display GitVersion outputs
+      run: |
+        echo "Branch: ${{ steps.branch_name.outputs.branch }}"
+        echo "Version: ${{ steps.gitversion.outputs.semVer }}"
+        echo "PreReleaseTag: ${{ steps.gitversion.outputs.preReleaseTag }}"
+        echo "PreReleaseLabel: ${{ steps.gitversion.outputs.preReleaseLabel }}"
+        echo "AssemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}"
+        echo "FullSemVer: ${{ steps.gitversion.outputs.fullSemVer }}"
+        echo "BranchName: ${{ steps.gitversion.outputs.branchName }}"
 
     - name: Login to Docker Hub
-      id: login-dockerhub
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Generate Version
-      id: versioning
-      run: |
-        latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-        echo "Latest tag: $latest_tag"
-        
-        # Remove 'v' prefix if present
-        latest_version=${latest_tag#v}
-        
-        # Split the version into an array
-        IFS='.' read -ra VERSION_PARTS <<< "$latest_version"
-        
-        MAJOR=${VERSION_PARTS[0]}
-        MINOR=${VERSION_PARTS[1]}
-        PATCH=${VERSION_PARTS[2]}
-        
-        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-          case "${{ github.event.inputs.version_increment }}" in
-            major)
-              MAJOR=$((MAJOR + 1))
-              MINOR=0
-              PATCH=0
-              ;;
-            minor)
-              MINOR=$((MINOR + 1))
-              PATCH=0
-              ;;
-            patch)
-              PATCH=$((PATCH + 1))
-              ;;
-          esac
-        else
-          # Auto-increment patch version for push events
-          PATCH=$((PATCH + 1))
-        fi
-        
-        new_version="v$MAJOR.$MINOR.$PATCH"
-        echo "New version: $new_version"
-        echo "::set-output name=new_version::$new_version"
-
-    # - name: Retrieve secrets from AWS Secrets Manager
-    #   run: |
-    #     echo "Retrieving secrets from AWS Secrets Manager..."
-    #     SECRETS=$(aws secretsmanager get-secret-value --secret-id ${{ env.SECRETS_NAME }} --query SecretString --output text)
-    #     echo "$SECRETS" | jq -r 'to_entries | map("\(.key)=\(.value)") | .[]' > .env
-
-
-    # - name: Temporarily Store .env in s3 config store
-    #   run: |
-    #     echo "Upload  env variables to s3..."
-    #     aws s3 cp .env s3://${{ env.S3_BUCKET }}
-
-
     - name: Set up Docker Buildx
-      id: buildx
       uses: docker/setup-buildx-action@v2
-
 
     - name: Cache Docker layers
       uses: actions/cache@v3
@@ -114,27 +88,26 @@ jobs:
         path: /tmp/.buildx-cache
         key: ${{ runner.os }}-buildx-${{ github.ref }}
         restore-keys: |
-            ${{ runner.os }}-buildx-${{ github.ref }}
-            ${{ runner.os }}-buildx
+          ${{ runner.os }}-buildx-${{ github.ref }}
+          ${{ runner.os }}-buildx
 
+    - name: Set Docker tags
+      id: docker_tags
+      run: |
+        TAGS="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:${{ steps.gitversion.outputs.semVer }},${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:${{ steps.branch_name.outputs.branch }}"
+        if [[ "${{ steps.check_release.outputs.is_release }}" == "true" ]]; then
+          TAGS="$TAGS,${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:latest"
+        fi
+        echo "tags=${TAGS}" >> $GITHUB_OUTPUT
 
-    - name: Build and push image to ECR
-      id: build-image
+    - name: Build and push image
       uses: docker/build-push-action@v6
-      env:
-        ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
-        ECR_REPOSITORY: ${{ env.ECR_REPO }}
-        IMAGE_TAG: ${{ steps.versioning.outputs.new_version }}
-      with: 
+      with:
         context: .
         push: true
-        builder: ${{ steps.buildx.outputs.name }}
-        tags: |
-          ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-          ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+        tags: ${{ steps.docker_tags.outputs.tags }}
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
-
 
     - name: Move cache
       run: |
@@ -144,220 +117,92 @@ jobs:
         else
           echo "No new cache to move."
         fi
-      shell: /usr/bin/bash -e {0}
-
-    - name: Clean up
-      if: always()
-      run: rm -f .env
-
-
-  # deploy_to_managed_instances:
-  #   runs-on: ubuntu-latest
-  #   needs:
-  #     - build-push-and-tag
-
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
-
-  #     - name: Configure AWS credentials
-  #       uses: aws-actions/configure-aws-credentials@v1
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_REGION }}
-
-
-
-  #     - name: Retrieve Managed Instances by Tags
-  #       id: get_instances
-  #       run: |
-  #         # Fetch instance IDs with specific tags, e.g., Environment=prod
-  #         instance_ids=$(aws ec2 describe-instances \
-  #           --filters "Name=tag:Project,Values=SUS" "Name=instance-state-name,Values=running" \
-  #           --query "Reservations[].Instances[].InstanceId" \
-  #           --output text)
-          
-  #         # Check if any instances were found
-  #         if [ -z "$instance_ids" ]; then
-  #           echo "No instances found with the specified tags."
-  #           exit 1
-  #         fi
-          
-  #         echo "Instance IDs: $instance_ids"
-  #         echo "::set-output name=instance_ids::$instance_ids"
-  #         echo "::set-output name=instance_ids::$instance_ids"
-
-
-
-
-  #     - name: Executing Docker Commands on Instances using SSM
-  #       uses: peterkimzz/aws-ssm-send-command@master
-  #       id: ssm
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: eu-west-1
-  #         instance-ids: ${{ steps.get_instances.outputs.instance_ids }}
-  #         working-directory: /home/ec2-user
-  #         comment: "Running docker commands"
-  #         command: |
-  #           sudo sh -c "set -e && \
-  #           export PATH=\$PATH:/usr/local/bin && \
-  #           cd /home/ec2-user && \
-  #           rm -rf .env.llm && \
-  #           echo 'Downloading docker-compose.yml from S3...' && \
-  #           aws s3 cp s3://${{ env.S3_BUCKET }}/docker-compose.yml . && \
-  #           echo 'Downloading .env from S3...' && \
-  #           aws s3 cp s3://${{ env.S3_BUCKET }}/.env . && \
-  #           echo 'Stopping existing Docker containers...' && \
-  #           /usr/local/bin/docker-compose -f /home/ec2-user/docker-compose.yml down && \
-  #           echo 'Logging in to Amazon ECR...' && \
-  #           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }} && \
-  #           echo 'Pulling latest Docker images...' && \
-  #           /usr/local/bin/docker-compose -f /home/ec2-user/docker-compose.yml pull && \
-  #           echo 'Starting Docker services with Docker Compose...' && \
-  #           /usr/local/bin/docker-compose -f /home/ec2-user/docker-compose.yml up -d"
-
-            
-
-  #     - name: Get the outputs
-  #       run: echo "The Command ID is ${{ steps.ssm.outputs.command-id }}"
-
-  #     - name: Check AWS SSM Command Status
-  #       env:
-  #         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         AWS_REGION: ${{ secrets.AWS_REGION  }}
-  #       run: |
-  #         command_id=${{ steps.ssm.outputs.command-id }}
-  #         instance_ids=${{ steps.get_instances.outputs.instance_ids }}
-
-  #         # Initial delay to ensure the command has time to start
-  #         sleep 10
-
-  #         for instance_id in $instance_ids; do
-  #           while true; do
-  #             # Fetch the command invocation details
-  #             output=$(aws ssm get-command-invocation \
-  #                         --command-id $command_id \
-  #                         --instance-id $instance_id \
-  #                         --output json)
-  #             echo "Output: $output"
-              
-  #             # Extract the status from the output
-  #             status=$(echo $output | jq -r '.Status')
-  #             echo "Current status for instance $instance_id: $status"
-              
-  #             # Check if the status is Success or Failed
-  #             if [[ "$status" == "Success" ]]; then
-  #               echo "Final status for instance $instance_id: $status"
-  #               break
-  #             elif [[ "$status" == "Failed" ]]; then
-  #                 echo "Commands failed on instance $instance_id. Ending the pipeline."
-  #                 exit 1
-  #             fi
-              
-  #             # Delay before the next status check
-  #             sleep 60
-  #           done
-  #         done
-
-  
-  #     - name: Remove env file from s3
-  #       if: always()
-  #       run: aws s3 rm s3://${{ env.S3_BUCKET }}/.env
-
 
   create-release:
-    needs:
-      - build-push-and-tag
-      # - deploy_to_managed_instances
+    needs: build-push-and-tag
+    if: |
+      needs.build-push-and-tag.outputs.is_release == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    - name: Generate Release Notes
-      id: generate_release_notes
-      run: |
-        # Get the latest tag
-        latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-
-        # Get the new version tag from the previous job
-        new_version="${{ needs.build-push-and-tag.outputs.new_version }}"
-
-        # If there's no previous tag, use the initial commit
-        if [ -z "$latest_tag" ]; then
-          latest_tag=$(git rev-list --max-parents=0 HEAD)
-        fi
-        
-
-        # Fetch the commit messages between the latest tag and HEAD
-        release_notes=$(git log ${latest_tag}..HEAD --pretty=format:"- %s (%h)")
-        
-        # If there are no commit messages, provide a default message
-        if [ -z "$release_notes" ]; then
-          release_notes="- Initial release"
-        fi
-
-        echo "Generated release notes:"
-        echo "$release_notes"
-        
-        # Escape newlines and quote special characters for GitHub Actions
-        release_notes="${release_notes//'%'/'%25'}"
-        release_notes="${release_notes//$'\n'/'%0A'}"
-        release_notes="${release_notes//$'\r'/'%0D'}"
-        
-        # Save the release notes as output
-        echo "::set-output name=release_notes::$release_notes"
-
-    - name: Check for existing release
-      id: check_release
-      run: |
-          release_id=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ needs.build-push-and-tag.outputs.new_version }}" \
-            | jq -r '.id')
-          if [ "$release_id" != "null" ]; then
-            echo "::set-output name=release_exists::true"
-            echo "::set-output name=release_id::$release_id"
-          else
-            echo "::set-output name=release_exists::false"
-          fi
-  
-    - name: Update existing release
-      if: steps.check_release.outputs.release_exists == 'true'
-      run: |
-        curl -X PATCH \
-          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          "https://api.github.com/repos/${{ github.repository }}/releases/${{ steps.check_release.outputs.release_id }}" \
-          -d '{
-            "tag_name": "${{ needs.build-push-and-tag.outputs.new_version }}",
-            "name": "Release ${{ needs.build-push-and-tag.outputs.new_version }}",
-            "body": "${{ steps.generate_release_notes.outputs.release_notes }}"
-          }'
-
-    - name: Create Release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Setup GitReleaseManager
+      uses: gittools/actions/gitreleasemanager/setup@v0.9.7
       with:
-        tag_name: ${{ needs.build-push-and-tag.outputs.new_version }}
-        release_name: Release ${{ needs.build-push-and-tag.outputs.new_version }}
-        body: ${{ steps.generate_release_notes.outputs.release_notes }}
-        draft: false
-        prerelease: false
+        versionSpec: '0.13.x'
+
+    - name: Generate Release Notes
+      id: release_notes
+      run: |
+          cat << EOF > release_notes.md
+          # Release ${{ needs.build-push-and-tag.outputs.new_version }}
+
+          ## What's Changed
+          $(git log $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --pretty=format:"* %s (%h)" | grep -E "^* (feat|fix|breaking|major):")
+
+          ## Docker Images
+          - \`${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:${{ needs.build-push-and-tag.outputs.new_version }}\`
+          - \`${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:latest\` (main branch only)
+
+          ## Installation
+          \`\`\`bash
+          docker pull ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:${{ needs.build-push-and-tag.outputs.new_version }}
+          \`\`\`
+          EOF
+
+    - name: Determine Pre-release Status
+      id: prerelease
+      run: |
+          BRANCH="${{ needs.build-push-and-tag.outputs.branch_name }}"
+          if [[ "$BRANCH" == "main" ]]; then
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          fi
+    - name: Create Release
+      uses: gittools/actions/gitreleasemanager/create@v0.9.7
+      with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          owner: ${{ github.repository_owner }}
+          repository: ${{ github.event.repository.name }}
+          milestone: ${{ needs.build-push-and-tag.outputs.new_version }}
+          name: "Release ${{ needs.build-push-and-tag.outputs.new_version }}"
+          inputFilePath: release_notes.md
+          isPreRelease: ${{ steps.prerelease.outputs.is_prerelease }}
+          targetcommitish: ${{ needs.build-push-and-tag.outputs.branch_name }}
+          assets: |
+            README.md
+            LICENSE
+            VERSION
+            docker-compose.yml
+          targetDirectory: ${{ github.workspace }}
+
+    - name: Publish Release
+      uses: gittools/actions/gitreleasemanager/publish@v0.9.7
+      with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          owner: ${{ github.repository_owner }}
+          repository: ${{ github.event.repository.name }}
+
+    - name: Close Milestone
+      uses: gittools/actions/gitreleasemanager/close@v0.9.7
+      with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          owner: ${{ github.repository_owner }}
+          repository: ${{ github.event.repository.name }}
+          milestone: ${{ needs.build-push-and-tag.outputs.new_version }}
 
     - name: Update version file
+      if: needs.build-push-and-tag.outputs.branch_name == 'main'
       run: |
-        echo "${{ needs.build-push-and-tag.outputs.new_version }}" > VERSION
+        echo "v${{ needs.build-push-and-tag.outputs.new_version }}" > VERSION
         git config user.name Terre8055
         git config user.email michaelappiah2018@icloud.com
         git add VERSION
-        git commit -m "Bump version to ${{ needs.build-push-and-tag.outputs.new_version }}"
+        git commit -m "chore: bump version to v${{ needs.build-push-and-tag.outputs.new_version }}"
         git pull --no-edit origin main
         git push
       env:
