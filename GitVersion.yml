@@ -32,6 +32,7 @@ branches:
     increment: Inherit
     source-branches: ['develop'] 
     
+    
   hotfix:
     regex: ^hotfix(es)?[/-]
     mode: ContinuousDeployment
