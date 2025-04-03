@@ -23,7 +23,7 @@ branches:
     mode: ContinuousDeployment
     tag: beta
     increment: Minor
-    source-branches: ['main', 'feature']
+    source-branches: ['main', 'features']
     
   feature:
     regex: ^features?[/-]
@@ -32,7 +32,7 @@ branches:
     increment: Inherit
     source-branches: ['develop'] 
     
-    
+
   hotfix:
     regex: ^hotfix(es)?[/-]
     mode: ContinuousDeployment
