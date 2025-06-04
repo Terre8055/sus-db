@@ -28,8 +28,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Discord notification
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        uses: Ilshidur/action-discord@master
+        run: echo 'test python' > test.txt
+
+      - name: send message
+        uses: appleboy/discord-action@v1.2.0
         with:
-          args: 'Test Signal'
+          webhook_id: ${{ secrets.WEBHOOK_ID }}
+          webhook_token: ${{ secrets.WEBHOOK_TOKEN }}
+          file: "tests.txt"
+          message: "Test Results for commit `${{ github.event.after }}` on branch `${{ github.ref_name }}` have completed with status: `${{ job.status }}`"
