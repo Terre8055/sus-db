@@ -1,0 +1,35 @@
+name: Test Discord
+
+# This workflow deploys to our dev environement which is currently
+# actually the "staging" branch. The "develop" branch is deprecated
+# for now.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [staging]
+    types: [closed]
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+
+  # run-tests:
+  #   uses: ./.github/workflows/_run-tests.yml
+  #   secrets:
+  #     SLACK_WEBHOOK: ${{ secrets.SLACK_UNIT_TEST_WEBHOOK }}
+  #     SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+  #     SLACK_CHANNEL: 'mediboard-notifications'
+           
+
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Discord notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        uses: Ilshidur/action-discord@master
+        with:
+          args: 'Test Signal'
