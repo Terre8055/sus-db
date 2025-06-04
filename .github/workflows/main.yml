@@ -35,5 +35,5 @@ jobs:
         with:
           webhook_id: ${{ secrets.WEBHOOK_ID }}
           webhook_token: ${{ secrets.WEBHOOK_TOKEN }}
-          file: "tests.txt"
+          file: "test.txt"
           message: "Test Results for commit `${{ github.event.after }}` on branch `${{ github.ref_name }}` have completed with status: `${{ job.status }}`"
